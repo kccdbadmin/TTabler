@@ -73,7 +73,7 @@ function renderGrid() {
     html += `<tr><th>${escapeHtml(p)}</th>`;
     state.days.forEach((d, di) => {
       const cards = (grid[di + "|" + pi] || []).map(cardHTML).join("");
-      html += `<td class="cell" data-day="${di}" data-period="${pi}">${cards}</td>`;
+      html += `<td class="cell" data-day="${di}" data-period="${pi}"><div class="cell-cards">${cards}</div></td>`;
     });
     html += `</tr>`;
   });
