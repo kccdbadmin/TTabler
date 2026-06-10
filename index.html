@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TTabler — Web Timetabler</title>
+<title>TTabler — My Timetables</title>
 <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -11,64 +11,28 @@
   <h1>T<span>T</span>abler</h1>
   <span class="tagline">This is the result of a scarred DB admin making a timetable</span>
   <div class="spacer"></div>
-  <button id="btn-generate" class="primary">⚡ Generate</button>
-  <button id="btn-clear" class="ghost">Clear grid</button>
-  <button id="btn-share">🔗 Share link</button>
-  <button id="btn-export" class="ghost">Export</button>
-  <button id="btn-import" class="ghost">Import</button>
-  <input type="file" id="file-input" accept="application/json" style="display:none" />
+  <button id="btn-new" class="primary">＋ New timetable</button>
+  <button id="btn-sample" class="ghost">Load sample</button>
+  <button id="btn-import" class="ghost">Import file</button>
+  <input type="file" id="lib-file" accept="application/json" style="display:none" />
 </header>
 
-<div class="main">
-  <aside class="sidebar">
-    <div class="tabs" id="tabs"></div>
-    <div class="tab-body" id="tab-body"></div>
-  </aside>
-
-  <section class="workspace">
-    <div class="toolbar">
-      <div class="grp">
-        <span class="stat">View</span>
-        <select id="view-mode">
-          <option value="class">By Class</option>
-          <option value="teacher">By Teacher</option>
-          <option value="room">By Room</option>
-        </select>
-        <select id="view-entity"></select>
-      </div>
-      <div class="spacer" style="flex:1"></div>
-      <div class="grp">
-        <span class="stat"><b id="stat-placed">0</b>/<b id="stat-total">0</b> placed</span>
-        <span id="stat-conflicts" class="badge ok">No conflicts</span>
-      </div>
+<div class="lib-scroll">
+  <div class="lib-wrap">
+    <div class="lib-head">
+      <h2>My timetables</h2>
+      <div class="lib-bar"></div>
     </div>
-    <div class="grid-wrap" id="grid-wrap"></div>
-    <div class="tray" id="tray">
-      <div class="tray-title">
-        <span>📥 Unplaced lessons — drag onto the grid</span>
-        <span id="tray-count" class="stat"></span>
-      </div>
-      <div class="tray-cards" id="tray-cards"></div>
-    </div>
-  </section>
+    <div id="lib"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!--
-  Modules load in dependency order (plain <script>, shared global scope).
-  Each file owns one concern — see the header comment in each.
-  app.js is LAST: it wires buttons and boots the first render.
--->
+<!-- Landing page only needs helpers, storage, the data model, and library.js -->
 <script src="js/util.js"></script>
 <script src="js/state.js"></script>
 <script src="js/storage.js"></script>
-<script src="js/constraints.js"></script>
-<script src="js/generator.js"></script>
-<script src="js/editors.js"></script>
-<script src="js/grid.js"></script>
-<script src="js/dnd.js"></script>
-<script src="js/share.js"></script>
-<script src="js/app.js"></script>
+<script src="js/library.js"></script>
 </body>
 </html>

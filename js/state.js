@@ -16,6 +16,16 @@ function setState(next) {
   return state;
 }
 
+// An empty timetable with a sensible default week — used by "New timetable".
+function blankState() {
+  return {
+    days: ["Mon","Tue","Wed","Thu","Fri"],
+    periods: ["1","2","3","4","5","6"],
+    subjects: [], teachers: [], classes: [], rooms: [], lessons: [], assignments: [],
+    ui: { mode:"class", entity:null },
+  };
+}
+
 function demoState() {
   const days = ["Mon","Tue","Wed","Thu","Fri"];
   const periods = ["1","2","3","4","5","6"];
