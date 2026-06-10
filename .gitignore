@@ -1,0 +1,8 @@
+# local preview / test artifacts
+.preview-check.png
+*.log
+
+# editor/OS cruft
+.vscode/
+.DS_Store
+Thumbs.db
