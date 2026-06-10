@@ -30,10 +30,60 @@ function assignmentMatchesView(a) {
 // The central redraw. Recomputes conflicts, then paints everything.
 function render() {
   conflicts = computeConflicts();
-  renderViewControls();
-  renderGrid();
+  const overview = !!(state.ui && state.ui.overview);
+  document.body.classList.toggle("overview-on", overview);
+  const ob = $("#btn-overview"); if (ob) ob.classList.toggle("active", overview);
+  if (overview) {
+    renderOverview();
+  } else {
+    renderViewControls();
+    renderGrid();
+  }
   renderTray();
   renderStats();
+}
+
+// All-classes overview: a dense, read-only grid — classes down the side,
+// day×period across the top — for eyeballing the whole school and spotting
+// clashes at a glance. Editing happens in the per-entity view (drag/drop).
+function renderOverview() {
+  const wrap = $("#grid-wrap");
+  if (!state.classes.length) { wrap.innerHTML = `<div class="empty-state">No classes yet. Add some from the toolbar.</div>`; return; }
+  const D = state.days.length, P = state.periods.length;
+  const byClass = {}; // classId -> "day|period" -> [assignment]
+  state.assignments.forEach(a => {
+    if (a.day == null) return;
+    const l = byId(state.lessons, a.lessonId); if (!l || !l.classId) return;
+    const m = byClass[l.classId] = byClass[l.classId] || {};
+    (m[a.day + "|" + a.period] = m[a.day + "|" + a.period] || []).push(a);
+  });
+
+  let html = `<table class="tt overview"><thead><tr><th class="ov-corner" rowspan="2">Class</th>`;
+  state.days.forEach(d => html += `<th class="day-h" colspan="${P}">${escapeHtml(d)}</th>`);
+  html += `</tr><tr>`;
+  state.days.forEach(() => state.periods.forEach(p => html += `<th class="per-h">${escapeHtml(p)}</th>`));
+  html += `</tr></thead><tbody>`;
+  state.classes.forEach(c => {
+    html += `<tr><th class="cls-h">${escapeHtml(c.name)}</th>`;
+    for (let d = 0; d < D; d++) for (let p = 0; p < P; p++) {
+      const cards = ((byClass[c.id] || {})[d + "|" + p] || []).map(ovCardHTML).join("");
+      html += `<td class="ov-cell">${cards}</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+function ovCardHTML(a) {
+  const info = lessonInfo(a.lessonId); if (!info) return "";
+  const bg = info.subject ? safeColor(info.subject.color) : "#888";
+  const fg = textOn(bg);
+  const short = info.subject ? (info.subject.short || info.subject.name) : "?";
+  const conf = conflicts.has(a.id) ? " conflict" : "";
+  const detail = `${info.subject ? info.subject.name : '?'} — ${info.teacher ? info.teacher.name : '—'}`;
+  const title = conf ? clashTitle(a.id) + " · " + detail : detail;
+  return `<span class="ov-card${conf}" style="background:${bg};color:${fg}" title="${escapeHtml(title)}">${escapeHtml(short).slice(0,5)}</span>`;
 }
 
 function cardHTML(a) {
@@ -53,7 +103,7 @@ function cardHTML(a) {
   const lockBtn = placed
     ? `<span class="lock" data-lock="${a.id}" title="${locked?'Locked — Generate and Clear won’t touch it. Click to unlock.':'Click to lock in place'}">${locked?'🔒':'🔓'}</span>`
     : "";
-  return `<div class="card${conf}${locked?' locked':''}" style="background:${bg};color:${fg}" draggable="${locked?'false':'true'}" data-aid="${a.id}" title="${conf?'⚠ Clash or time-off violation in this slot':''}">
+  return `<div class="card${conf}${locked?' locked':''}" style="background:${bg};color:${fg}" draggable="${locked?'false':'true'}" data-aid="${a.id}" title="${escapeHtml(clashTitle(a.id))}">
     ${lockBtn}
     <span class="c-sub">${info.subject?escapeHtml(info.subject.name):'?'}</span>
     <span class="c-meta">${line2}</span>
@@ -132,10 +182,12 @@ function attachTimeOff() {
 }
 
 function renderTray() {
-  const cards = state.assignments.filter(a => a.day == null && assignmentMatchesView(a));
+  const overview = !!(state.ui && state.ui.overview);
+  const cards = state.assignments.filter(a => a.day == null && (overview || assignmentMatchesView(a)));
   $("#tray-cards").innerHTML = cards.map(cardHTML).join("");
-  $("#tray-count").textContent = cards.length ? `${cards.length} for this view` : "all placed ✓";
+  $("#tray-count").textContent = cards.length ? `${cards.length}${overview ? " unplaced" : " for this view"}` : "all placed ✓";
   attachDnD();
+  attachCardTools();
 }
 
 function renderStats() {

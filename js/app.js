@@ -37,6 +37,11 @@ $("#btn-clear").onclick = () => {
   save(); render(); toast("Grid cleared");
 };
 $("#btn-timeoff").onclick = toggleTimeOffMode;
+$("#btn-overview").onclick = () => {
+  state.ui.overview = !state.ui.overview;
+  if (state.ui.overview && timeOffMode) toggleTimeOffMode(); // paint mode is per-entity only
+  save(); render();
+};
 $("#drawer-close").onclick = closeDataEditor;
 $("#drawer-backdrop").onclick = closeDataEditor;
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDataEditor(); });

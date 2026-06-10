@@ -188,6 +188,28 @@ body.timeoff-mode .grid-wrap { outline: 2px dashed var(--warn); outline-offset: 
 .tray .card { height: auto; min-width: 96px; width: auto; cursor: grab; }
 .tray.drop-hover { outline: 2px dashed var(--accent); outline-offset: -4px; }
 
+/* All-classes overview */
+body.overview-on #view-controls { display: none; }
+#btn-overview.active { background: var(--accent-d); border-color: var(--accent); color: var(--text); }
+table.tt.overview { min-width: 0; width: auto; font-size: 10px; }
+.tt.overview th, .tt.overview td { border: 1px solid var(--border); }
+.tt.overview .ov-corner {
+  position: sticky; left: 0; top: 0; z-index: 6; background: var(--panel);
+  text-align: left; padding: 4px 8px; min-width: 64px;
+}
+.tt.overview .day-h { position: sticky; top: 0; z-index: 4; background: var(--panel-2); padding: 4px 6px; }
+.tt.overview .per-h { position: sticky; top: 27px; z-index: 4; background: var(--panel); font-weight: 500; min-width: 22px; padding: 3px 2px; color: var(--muted); }
+.tt.overview .cls-h {
+  position: sticky; left: 0; z-index: 2; background: var(--panel);
+  text-align: left; padding: 4px 8px; min-width: 64px; color: var(--text); font-weight: 600;
+}
+.tt.overview td.ov-cell { padding: 1px; height: 24px; vertical-align: top; white-space: nowrap; }
+.ov-card {
+  display: inline-block; border-radius: 3px; padding: 1px 3px; margin: 1px;
+  font-weight: 700; line-height: 1.25; cursor: default;
+}
+.ov-card.conflict { outline: 2px solid var(--danger); outline-offset: -1px; }
+
 .empty-state { color: var(--muted); text-align: center; padding: 40px; font-size: 13px; }
 .toast {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
