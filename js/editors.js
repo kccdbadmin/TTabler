@@ -9,6 +9,37 @@
 const TABS = ["Lessons","Classes","Teachers","Subjects","Rooms","Time"];
 let activeTab = "Lessons";
 
+// Toolbar buttons that open the data editor drawer. One per data type, so each
+// section is one click away while the grid keeps the full width.
+function renderDataButtons() {
+  const el = $("#data-buttons"); if (!el) return;
+  el.innerHTML = "";
+  TABS.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "ghost data-btn";
+    b.textContent = t;
+    b.onclick = () => openDataEditor(t);
+    el.appendChild(b);
+  });
+}
+
+function openDataEditor(tab) {
+  activeTab = tab || activeTab;
+  renderTabs(); renderTabBody();
+  $("#drawer").classList.add("open");
+  $("#drawer-backdrop").classList.add("open");
+  $("#drawer").setAttribute("aria-hidden", "false");
+  $("#data-buttons").querySelectorAll(".data-btn").forEach(b =>
+    b.classList.toggle("active", b.textContent === activeTab));
+}
+
+function closeDataEditor() {
+  $("#drawer").classList.remove("open");
+  $("#drawer-backdrop").classList.remove("open");
+  $("#drawer").setAttribute("aria-hidden", "true");
+  $("#data-buttons").querySelectorAll(".data-btn").forEach(b => b.classList.remove("active"));
+}
+
 function renderTabs() {
   const el = $("#tabs"); el.innerHTML = "";
   TABS.forEach(t => {

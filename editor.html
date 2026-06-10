@@ -22,13 +22,10 @@
 </header>
 
 <div class="main">
-  <aside class="sidebar">
-    <div class="tabs" id="tabs"></div>
-    <div class="tab-body" id="tab-body"></div>
-  </aside>
-
   <section class="workspace">
     <div class="toolbar">
+      <div class="grp" id="data-buttons"></div>
+      <span class="tb-sep"></span>
       <div class="grp">
         <span class="stat">View</span>
         <select id="view-mode">
@@ -55,6 +52,19 @@
     </div>
   </section>
 </div>
+
+<!-- Off-canvas data editor: opened from the toolbar buttons, closed by ✕ /
+     backdrop / Esc. Holds the same tabbed editors that used to be a fixed
+     sidebar, so the grid gets the full screen width. -->
+<div class="drawer-backdrop" id="drawer-backdrop"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="drawer-title">Edit data</span>
+    <button class="ghost" id="drawer-close" title="Close (Esc)">✕</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="tab-body" id="tab-body"></div>
+</aside>
 
 <div class="toast" id="toast"></div>
 

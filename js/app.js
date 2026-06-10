@@ -8,7 +8,7 @@
 
 function boot() {
   const ni = $("#tt-name"); if (ni) ni.value = state.name || "";
-  renderTabs(); renderTabBody(); renderViewControls(); render();
+  renderDataButtons(); renderViewControls(); render();
 }
 
 // Explicit Save (the 💾 button). For your own timetables it just confirms
@@ -37,6 +37,9 @@ $("#btn-clear").onclick = () => {
   save(); render(); toast("Grid cleared");
 };
 $("#btn-timeoff").onclick = toggleTimeOffMode;
+$("#drawer-close").onclick = closeDataEditor;
+$("#drawer-backdrop").onclick = closeDataEditor;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDataEditor(); });
 $("#btn-share").onclick = shareLink;
 $("#btn-export").onclick = exportFile;
 $("#btn-import").onclick = () => $("#file-input").click();
