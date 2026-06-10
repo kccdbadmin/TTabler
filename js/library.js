@@ -27,6 +27,19 @@ function newSample() {
   openTimetable(s.id);
 }
 
+function importAscToLibrary(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const { state: parsed, stats } = parseAscXml(r.result);
+      const s = createTimetable(file.name.replace(/\.xml$/i, ""), parsed);
+      toast(`Imported ${stats.classes} classes, ${stats.lessons} lessons, ${stats.placed} placed`);
+      openTimetable(s.id);
+    } catch(e) { toast("Couldn't read that aSc XML: " + e.message); }
+  };
+  r.readAsText(file);
+}
+
 function importToLibrary(file) {
   const r = new FileReader();
   r.onload = () => {
@@ -112,5 +125,7 @@ function renderLibrary() {
   $("#btn-sample").onclick = newSample;
   $("#btn-import").onclick = () => $("#lib-file").click();
   $("#lib-file").onchange = e => { if (e.target.files[0]) importToLibrary(e.target.files[0]); };
+  $("#btn-import-asc").onclick = () => $("#lib-asc-file").click();
+  $("#lib-asc-file").onchange = e => { if (e.target.files[0]) importAscToLibrary(e.target.files[0]); };
   renderLibrary();
 })();

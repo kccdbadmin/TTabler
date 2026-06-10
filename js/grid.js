@@ -45,6 +45,7 @@ function cardHTML(a) {
   if (state.ui.mode === "class")        line2 = `${info.teacher?escapeHtml(info.teacher.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'}`;
   else if (state.ui.mode === "teacher") line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'}`;
   else                                  line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.teacher?escapeHtml(info.teacher.name):'—'}`;
+  if (info.lesson.group) line2 += ` · ${escapeHtml(info.lesson.group.name)}`;
   const conf = conflicts.has(a.id) ? " conflict" : "";
   return `<div class="card${conf}" style="background:${bg};color:${fg}" draggable="true" data-aid="${a.id}" title="${conf?'⚠ Clash in this slot':''}">
     <span class="c-sub">${info.subject?escapeHtml(info.subject.name):'?'}</span>

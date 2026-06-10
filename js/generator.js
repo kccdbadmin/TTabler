@@ -19,7 +19,7 @@ function generate() {
     const here = placement[key] || [];
     for (const other of here) {
       const ol = byId(state.lessons, other.lessonId);
-      if (lesson.classId === ol.classId) return false;
+      if (classSlotClash(lesson, ol)) return false;
       if (lesson.teacherId && lesson.teacherId === ol.teacherId) return false;
       if (lesson.roomId && lesson.roomId === ol.roomId) return false;
     }

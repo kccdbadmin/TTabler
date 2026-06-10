@@ -1,5 +1,6 @@
 # local preview / test artifacts
 .preview-*.png
+.preview-*.html
 *.log
 
 # editor/OS cruft
