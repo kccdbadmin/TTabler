@@ -13,11 +13,15 @@ let activeTab = "Lessons";
 // section is one click away while the grid keeps the full width.
 function renderDataButtons() {
   const el = $("#data-buttons"); if (!el) return;
+  // entity counts shown as a badge on the button (live: re-rendered each draw)
+  const counts = { Classes: state.classes.length, Teachers: state.teachers.length, Subjects: state.subjects.length };
   el.innerHTML = "";
   TABS.forEach(t => {
     const b = document.createElement("button");
     b.className = "ghost data-btn";
-    b.textContent = t;
+    b.dataset.tab = t;
+    b.innerHTML = escapeHtml(t) + (t in counts ? ` <span class="count-badge">${counts[t]}</span>` : "");
+    b.classList.toggle("active", t === activeTab && $("#drawer").classList.contains("open"));
     b.onclick = () => openDataEditor(t);
     el.appendChild(b);
   });
@@ -30,7 +34,7 @@ function openDataEditor(tab) {
   $("#drawer-backdrop").classList.add("open");
   $("#drawer").setAttribute("aria-hidden", "false");
   $("#data-buttons").querySelectorAll(".data-btn").forEach(b =>
-    b.classList.toggle("active", b.textContent === activeTab));
+    b.classList.toggle("active", b.dataset.tab === activeTab));
 }
 
 function closeDataEditor() {

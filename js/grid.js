@@ -31,6 +31,7 @@ function assignmentMatchesView(a) {
 // The central redraw. Recomputes conflicts, then paints everything.
 function render() {
   conflicts = computeConflicts();
+  renderDataButtons(); // keep the toolbar entity counts live
   const overview = !!(state.ui && state.ui.overview);
   document.body.classList.toggle("overview-on", overview);
   const ob = $("#btn-overview"); if (ob) ob.classList.toggle("active", overview);
