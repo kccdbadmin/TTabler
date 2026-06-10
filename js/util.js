@@ -29,3 +29,11 @@ function escapeHtml(s) {
 }
 
 const PALETTE = ["#4f9cf9","#f6c453","#3ddc97","#f97066","#b692f6","#fda4af","#7dd3fc","#fbbf24","#86efac","#fca5a5","#c4b5fd","#67e8f9"];
+
+// Whitelist a colour before it goes into a style attribute or input value.
+// Stored data (shared #tt= links, imported JSON/XML) is UNTRUSTED — a value
+// like `#fff"><img src=x onerror=...>` would otherwise break out of the
+// attribute and run as HTML. Only plain hex colours are allowed through.
+function safeColor(c, fallback = "#888") {
+  return /^#[0-9a-fA-F]{3,8}$/.test(String(c)) ? c : fallback;
+}

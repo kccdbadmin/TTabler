@@ -38,7 +38,7 @@ function render() {
 
 function cardHTML(a) {
   const info = lessonInfo(a.lessonId); if (!info) return "";
-  const bg = info.subject ? info.subject.color : "#888";
+  const bg = info.subject ? safeColor(info.subject.color) : "#888";
   const fg = textOn(bg);
   // what meta to show depends on view
   let line2;
@@ -47,7 +47,14 @@ function cardHTML(a) {
   else                                  line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.teacher?escapeHtml(info.teacher.name):'—'}`;
   if (info.lesson.group) line2 += ` · ${escapeHtml(info.lesson.group.name)}`;
   const conf = conflicts.has(a.id) ? " conflict" : "";
-  return `<div class="card${conf}" style="background:${bg};color:${fg}" draggable="true" data-aid="${a.id}" title="${conf?'⚠ Clash in this slot':''}">
+  const placed = a.day != null;
+  const locked = placed && a.locked;
+  // lock toggle only on placed cards; locked cards can't be dragged (or auto-moved)
+  const lockBtn = placed
+    ? `<span class="lock" data-lock="${a.id}" title="${locked?'Locked — Generate and Clear won’t touch it. Click to unlock.':'Click to lock in place'}">${locked?'🔒':'🔓'}</span>`
+    : "";
+  return `<div class="card${conf}${locked?' locked':''}" style="background:${bg};color:${fg}" draggable="${locked?'false':'true'}" data-aid="${a.id}" title="${conf?'⚠ Clash or time-off violation in this slot':''}">
+    ${lockBtn}
     <span class="c-sub">${info.subject?escapeHtml(info.subject.name):'?'}</span>
     <span class="c-meta">${line2}</span>
   </div>`;
@@ -67,6 +74,9 @@ function renderGrid() {
     (grid[a.day + "|" + a.period] = grid[a.day + "|" + a.period] || []).push(a);
   });
 
+  // slots where the viewed entity is marked unavailable (time-off)
+  const offSet = new Set((currentEntity() || {}).off || []);
+
   let html = `<table class="tt"><thead><tr><th></th>`;
   state.days.forEach(d => html += `<th>${escapeHtml(d)}</th>`);
   html += `</tr></thead><tbody>`;
@@ -74,13 +84,51 @@ function renderGrid() {
     html += `<tr><th>${escapeHtml(p)}</th>`;
     state.days.forEach((d, di) => {
       const cards = (grid[di + "|" + pi] || []).map(cardHTML).join("");
-      html += `<td class="cell" data-day="${di}" data-period="${pi}"><div class="cell-cards">${cards}</div></td>`;
+      const off = offSet.has(di + "|" + pi) ? " off" : "";
+      html += `<td class="cell${off}" data-day="${di}" data-period="${pi}"><div class="cell-cards">${cards}</div></td>`;
     });
     html += `</tr>`;
   });
   html += `</tbody></table>`;
   wrap.innerHTML = html;
   attachDnD();
+  attachCardTools();
+  if (timeOffMode) attachTimeOff();
+}
+
+// ---- card lock toggle ------------------------------------------------------
+function toggleLock(aid) {
+  const a = byId(state.assignments, aid);
+  if (!a || a.day == null) return;
+  a.locked = !a.locked; save(); render();
+}
+function attachCardTools() {
+  document.querySelectorAll(".card .lock").forEach(el => {
+    el.addEventListener("mousedown", e => e.stopPropagation()); // don't start a drag
+    el.addEventListener("click", e => { e.stopPropagation(); e.preventDefault(); toggleLock(el.dataset.lock); });
+  });
+}
+
+// ---- time-off paint mode ---------------------------------------------------
+// When on, clicking a cell toggles availability for the VIEWED entity.
+let timeOffMode = false;
+function toggleTimeOffMode() {
+  timeOffMode = !timeOffMode;
+  $("#btn-timeoff").classList.toggle("active", timeOffMode);
+  document.body.classList.toggle("timeoff-mode", timeOffMode);
+  render();
+}
+function attachTimeOff() {
+  document.querySelectorAll(".cell").forEach(cell => {
+    cell.addEventListener("click", () => {
+      const e = currentEntity(); if (!e) return;
+      e.off = e.off || [];
+      const key = cell.dataset.day + "|" + cell.dataset.period;
+      const i = e.off.indexOf(key);
+      if (i >= 0) e.off.splice(i, 1); else e.off.push(key);
+      save(); render();
+    });
+  });
 }
 
 function renderTray() {

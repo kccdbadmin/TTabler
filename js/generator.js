@@ -15,6 +15,7 @@ function generate() {
 
   // Is a slot free for this lesson given the current placement map?
   function fits(placement, lesson, slot) {
+    if (slotOff(lesson, slot.day, slot.period)) return false; // entity unavailable here
     const key = slot.day + "|" + slot.period;
     const here = placement[key] || [];
     for (const other of here) {
@@ -26,17 +27,25 @@ function generate() {
     return true;
   }
 
+  // Locked + placed cards are kept exactly where they are.
+  const isPinned = a => a.locked && a.day != null;
+
   let best = null, bestPlaced = -1;
   const RESTARTS = 40;
   for (let r = 0; r < RESTARTS; r++) {
     const placement = {}; // key -> [assignment]
-    const result = state.assignments.map(a => ({ ...a, day:null, period:null }));
+    // keep pinned cards in place; reset the rest to unplaced
+    const result = state.assignments.map(a => isPinned(a) ? { ...a } : ({ ...a, day:null, period:null }));
+    result.filter(isPinned).forEach(a => {
+      const key = a.day + "|" + a.period;
+      (placement[key] = placement[key] || []).push(a);
+    });
     // schedule hardest first: more constrained lessons (bigger count) first, shuffle for variety
-    const order = [...result].sort((a,b) => {
+    const order = result.filter(a => !isPinned(a)).sort((a,b) => {
       const la = byId(state.lessons, a.lessonId), lb = byId(state.lessons, b.lessonId);
       return lb.count - la.count || Math.random() - .5;
     });
-    let placed = 0;
+    let placed = result.filter(isPinned).length;
     for (const a of order) {
       const lesson = byId(state.lessons, a.lessonId);
       // candidate slots, prefer days with fewer of this class's lessons (spread out)

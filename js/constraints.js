@@ -10,6 +10,21 @@
 // Latest computed conflicts — read by grid.js when drawing cards.
 let conflicts = new Set();
 
+// ---- Time-off / availability ----------------------------------------------
+// Each class / teacher / room may carry an `off` array of "day|period" keys
+// (set by painting on the grid). A lesson placed in a slot where its class,
+// teacher, OR room is marked off is a violation — flagged like a clash.
+function entityOff(arr, id) {
+  const e = byId(arr, id);
+  return (e && e.off) || [];
+}
+function slotOff(lesson, day, period) {
+  const key = day + "|" + period;
+  return (lesson.classId   && entityOff(state.classes,  lesson.classId).includes(key)) ||
+         (lesson.teacherId && entityOff(state.teachers, lesson.teacherId).includes(key)) ||
+         (lesson.roomId    && entityOff(state.rooms,    lesson.roomId).includes(key));
+}
+
 // Two lessons of the SAME class may share a slot when they are different
 // groups of the same division (e.g. Boys vs Girls — disjoint students).
 // Anything else — entire-class vs group, different divisions, same group —
@@ -44,6 +59,12 @@ function computeConflicts() {
         if (clash) { found.add(list[i].id); found.add(list[j].id); }
       }
     }
+  }
+  // time-off: a placed card sitting on an unavailable slot is also a violation
+  for (const a of state.assignments) {
+    if (a.day == null) continue;
+    const l = byId(state.lessons, a.lessonId);
+    if (l && slotOff(l, a.day, a.period)) found.add(a.id);
   }
   return found;
 }

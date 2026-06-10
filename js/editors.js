@@ -53,9 +53,9 @@ function renderSubjectsTab(el) {
   el.innerHTML = `<h3>Subjects</h3><p class="hint">Colours show up on the timetable cards.</p>`;
   state.subjects.forEach(item => {
     const row = document.createElement("div"); row.className = "row-item";
-    row.innerHTML = `<span class="swatch" style="background:${item.color}"></span>
+    row.innerHTML = `<span class="swatch" style="background:${safeColor(item.color)}"></span>
       <input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
-      <input type="color" value="${item.color}" style="width:30px;height:24px;padding:1px" />
+      <input type="color" value="${safeColor(item.color)}" style="width:30px;height:24px;padding:1px" />
       <span class="x">×</span>`;
     row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
     row.querySelector('input[type=color]').oninput = e => { item.color = e.target.value; row.querySelector(".swatch").style.background = e.target.value; save(); render(); };
@@ -80,10 +80,13 @@ function renderLessonsTab(el) {
   state.lessons.forEach(l => {
     const info = lessonInfo(l.id);
     const row = document.createElement("div"); row.className = "row-item";
-    row.innerHTML = `<span class="swatch" style="background:${info.subject?info.subject.color:'#888'}"></span>
+    const grp = l.group ? ` · <b>${escapeHtml(l.group.name)}</b>${l.group.division?` <span class="div-tag">${escapeHtml(l.group.division)}</span>`:''}` : "";
+    row.innerHTML = `<span class="swatch" style="background:${info.subject?safeColor(info.subject.color):'#888'}"></span>
       <span class="label">${info.cls?escapeHtml(info.cls.name):'?'} · ${info.subject?escapeHtml(info.subject.name):'?'}
-        <span class="sub">${info.teacher?escapeHtml(info.teacher.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'} · ${l.count}/wk</span></span>
+        <span class="sub">${info.teacher?escapeHtml(info.teacher.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'} · ${l.count}/wk${grp}</span></span>
+      <span class="grp-edit" title="Set group / division (lets two splits of a class share a slot)">👥</span>
       <span class="x">×</span>`;
+    row.querySelector(".grp-edit").onclick = () => editGroup(l.id);
     row.querySelector(".x").onclick = () => {
       state.lessons = state.lessons.filter(x => x.id !== l.id);
       state.assignments = state.assignments.filter(a => a.lessonId !== l.id);
@@ -113,6 +116,19 @@ function renderLessonsTab(el) {
     save(); renderTabBody(); render();
   };
   el.appendChild(add);
+}
+
+// Set / change / clear a lesson's group + division. Two lessons of the same
+// class in the same division but different groups (e.g. Boys vs Girls) are
+// allowed to share a slot — see classSlotClash() in constraints.js.
+function editGroup(lessonId) {
+  const l = byId(state.lessons, lessonId); if (!l) return;
+  const name = prompt("Group name (e.g. Boys, Girls, Set 1). Leave blank to clear:", l.group ? l.group.name : "");
+  if (name === null) return;
+  if (!name.trim()) { delete l.group; save(); renderTabBody(); render(); toast("Group cleared"); return; }
+  const division = prompt("Division this group belongs to (e.g. Gender, Ability).\nGroups in the SAME division can share a time slot.", l.group ? l.group.division : "") || "";
+  l.group = { name: name.trim(), division: division.trim() };
+  save(); renderTabBody(); render(); toast("Group set");
 }
 
 function renderTimeTab(el) {

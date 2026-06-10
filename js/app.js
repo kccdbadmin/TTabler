@@ -32,10 +32,11 @@ $("#btn-save").onclick = saveExplicit;
 $("#tt-name").onchange = e => { state.name = e.target.value.trim() || state.name; save(); };
 $("#btn-generate").onclick = generate;
 $("#btn-clear").onclick = () => {
-  if (!confirm("Move all cards back to the unplaced tray?")) return;
-  state.assignments.forEach(a => { a.day = null; a.period = null; });
+  if (!confirm("Move all cards back to the unplaced tray? (Locked cards stay put.)")) return;
+  state.assignments.forEach(a => { if (a.locked) return; a.day = null; a.period = null; });
   save(); render(); toast("Grid cleared");
 };
+$("#btn-timeoff").onclick = toggleTimeOffMode;
 $("#btn-share").onclick = shareLink;
 $("#btn-export").onclick = exportFile;
 $("#btn-import").onclick = () => $("#file-input").click();
