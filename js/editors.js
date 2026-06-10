@@ -40,6 +40,17 @@ function closeDataEditor() {
   $("#data-buttons").querySelectorAll(".data-btn").forEach(b => b.classList.remove("active"));
 }
 
+// Focus the grid on a single entity and show every card related to it
+// (aSc-style drill-in). Leaves the overview and closes the drawer.
+function viewEntity(mode, id) {
+  state.ui.mode = mode;
+  state.ui.entity = id;
+  state.ui.overview = false;
+  save();
+  closeDataEditor();
+  refreshViews();
+}
+
 function renderTabs() {
   const el = $("#tabs"); el.innerHTML = "";
   TABS.forEach(t => {
@@ -61,12 +72,15 @@ function renderTabBody() {
 }
 
 function renderSimpleTab(el, key, title, placeholder) {
-  el.innerHTML = `<h3>${title}</h3><p class="hint">Add, rename or remove. Removing one also removes lessons that use it.</p>`;
+  const mode = { classes:"class", teachers:"teacher", rooms:"room" }[key];
+  el.innerHTML = `<h3>${title}</h3><p class="hint">Click 👁 to see its timetable. Add, rename or remove (removing one also removes lessons that use it).</p>`;
   state[key].forEach(item => {
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
+                     <span class="view-ent" title="Show this timetable">👁</span>
                      <span class="x">×</span>`;
     row.querySelector("input").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
+    row.querySelector(".view-ent").onclick = () => viewEntity(mode, item.id);
     row.querySelector(".x").onclick = () => { removeEntity(key, item.id); };
     el.appendChild(row);
   });
@@ -81,15 +95,17 @@ function renderSimpleTab(el, key, title, placeholder) {
 }
 
 function renderSubjectsTab(el) {
-  el.innerHTML = `<h3>Subjects</h3><p class="hint">Colours show up on the timetable cards.</p>`;
+  el.innerHTML = `<h3>Subjects</h3><p class="hint">Colours show up on the timetable cards. Click 👁 to see every lesson of a subject.</p>`;
   state.subjects.forEach(item => {
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<span class="swatch" style="background:${safeColor(item.color)}"></span>
       <input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
       <input type="color" value="${safeColor(item.color)}" style="width:30px;height:24px;padding:1px" />
+      <span class="view-ent" title="Show this subject's lessons">👁</span>
       <span class="x">×</span>`;
     row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
     row.querySelector('input[type=color]').oninput = e => { item.color = e.target.value; row.querySelector(".swatch").style.background = e.target.value; save(); render(); };
+    row.querySelector(".view-ent").onclick = () => viewEntity("subject", item.id);
     row.querySelector(".x").onclick = () => removeEntity("subjects", item.id);
     el.appendChild(row);
   });

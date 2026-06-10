@@ -91,7 +91,7 @@ function lessonInfo(lessonId) {
 }
 
 function entitiesForMode(mode) {
-  return { class: state.classes, teacher: state.teachers, room: state.rooms }[mode] || [];
+  return { class: state.classes, teacher: state.teachers, room: state.rooms, subject: state.subjects }[mode] || [];
 }
 
 // The single entity currently being viewed (the one the grid is drawn for).

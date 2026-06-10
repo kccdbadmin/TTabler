@@ -24,6 +24,7 @@ function assignmentMatchesView(a) {
   if (state.ui.mode === "class")   return l.classId === state.ui.entity;
   if (state.ui.mode === "teacher") return l.teacherId === state.ui.entity;
   if (state.ui.mode === "room")    return l.roomId === state.ui.entity;
+  if (state.ui.mode === "subject") return l.subjectId === state.ui.entity;
   return false;
 }
 
@@ -64,7 +65,7 @@ function renderOverview() {
   state.days.forEach(() => state.periods.forEach(p => html += `<th class="per-h">${escapeHtml(p)}</th>`));
   html += `</tr></thead><tbody>`;
   state.classes.forEach(c => {
-    html += `<tr><th class="cls-h">${escapeHtml(c.name)}</th>`;
+    html += `<tr><th class="cls-h" data-cls="${c.id}" title="Show ${escapeHtml(c.name)}'s timetable">${escapeHtml(c.name)}</th>`;
     for (let d = 0; d < D; d++) for (let p = 0; p < P; p++) {
       const cards = ((byClass[c.id] || {})[d + "|" + p] || []).map(ovCardHTML).join("");
       html += `<td class="ov-cell">${cards}</td>`;
@@ -73,6 +74,9 @@ function renderOverview() {
   });
   html += `</tbody></table>`;
   wrap.innerHTML = html;
+  // click a class name to drill into its own timetable
+  wrap.querySelectorAll(".cls-h[data-cls]").forEach(th =>
+    th.addEventListener("click", () => viewEntity("class", th.dataset.cls)));
 }
 
 function ovCardHTML(a) {
@@ -94,6 +98,7 @@ function cardHTML(a) {
   let line2;
   if (state.ui.mode === "class")        line2 = `${info.teacher?escapeHtml(info.teacher.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'}`;
   else if (state.ui.mode === "teacher") line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'}`;
+  else if (state.ui.mode === "subject") line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.teacher?escapeHtml(info.teacher.name):'—'}`;
   else                                  line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.teacher?escapeHtml(info.teacher.name):'—'}`;
   if (info.lesson.group) line2 += ` · ${escapeHtml(info.lesson.group.name)}`;
   const conf = conflicts.has(a.id) ? " conflict" : "";
