@@ -25,6 +25,15 @@ function slotOff(lesson, day, period) {
          (lesson.roomId    && entityOff(state.rooms,    lesson.roomId).includes(key));
 }
 
+// Rooms are NOT treated as a hard resource. Most schools (and this one in
+// particular: far fewer rooms than classes) use the room field nominally —
+// two lessons sharing a room is fine. Flip this to true to make a shared room
+// count as a clash again, for schools where rooms are genuinely exclusive.
+const ENFORCE_ROOM_CLASHES = false;
+function roomClash(la, lb) {
+  return ENFORCE_ROOM_CLASHES && !!la.roomId && la.roomId === lb.roomId;
+}
+
 // Two lessons of the SAME class may share a slot when they are different
 // groups of the same division (e.g. Boys vs Girls — disjoint students).
 // Anything else — entire-class vs group, different divisions, same group —
@@ -55,7 +64,7 @@ function computeConflicts() {
         const clash =
           classSlotClash(A.lesson, B.lesson) ||
           (A.lesson.teacherId && A.lesson.teacherId === B.lesson.teacherId) ||
-          (A.lesson.roomId && A.lesson.roomId === B.lesson.roomId);
+          roomClash(A.lesson, B.lesson);
         if (clash) { found.add(list[i].id); found.add(list[j].id); }
       }
     }

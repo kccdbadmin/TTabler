@@ -26,7 +26,7 @@ function generate() {
     for (const ol of here) {
       if (classSlotClash(lesson, ol)) return false;
       if (lesson.teacherId && lesson.teacherId === ol.teacherId) return false;
-      if (lesson.roomId && lesson.roomId === ol.roomId) return false;
+      if (roomClash(lesson, ol)) return false;
     }
     return true;
   }
