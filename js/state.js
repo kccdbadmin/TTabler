@@ -117,3 +117,54 @@ function totalSlots() {
   for (let d = 0; d < state.days.length; d++) n += periodsOnDay(d);
   return n;
 }
+
+// ---- Groups / divisions -----------------------------------------------------
+// Groups are first-class, defined per class: class.divisions = [{ id, name,
+// groups:[{id,name}] }]. A lesson references one via lesson.groupId (blank =
+// whole class). lessonGroup() resolves that to a unified shape, falling back to
+// the legacy free-text lesson.group {name, division} so old/imported data still
+// works until migrateGroups() folds it in.
+function lessonGroup(lesson) {
+  if (!lesson) return null;
+  if (lesson.groupId) {
+    const cls = byId(state.classes, lesson.classId);
+    if (cls && cls.divisions) {
+      for (const d of cls.divisions) {
+        const g = d.groups.find(x => x.id === lesson.groupId);
+        if (g) return { divisionKey: d.id, groupKey: g.id, divisionName: d.name, groupName: g.name };
+      }
+    }
+  }
+  if (lesson.group) return { divisionKey: "L:" + lesson.group.division, groupKey: "L:" + lesson.group.name,
+                             divisionName: lesson.group.division, groupName: lesson.group.name };
+  return null;
+}
+
+// Flat list of a class's groups for dropdowns: [{ id, label }].
+function classGroupOptions(classId) {
+  const cls = byId(state.classes, classId);
+  if (!cls || !cls.divisions) return [];
+  const out = [];
+  cls.divisions.forEach(d => d.groups.forEach(g => out.push({ id: g.id, label: `${g.name} (${d.name})` })));
+  return out;
+}
+
+// One-time: fold legacy free-text lesson.group into structured per-class
+// divisions/groups and point lessons at the created group ids. Idempotent.
+function migrateGroups() {
+  let changed = false;
+  for (const cls of state.classes) if (!cls.divisions) { cls.divisions = []; changed = true; }
+  for (const l of state.lessons) {
+    if (l.groupId || !l.group) continue;
+    const cls = byId(state.classes, l.classId); if (!cls) continue;
+    const divName = l.group.division || "Groups";
+    let div = cls.divisions.find(d => d.name === divName);
+    if (!div) { div = { id: uid(), name: divName, groups: [] }; cls.divisions.push(div); }
+    let g = div.groups.find(x => x.name === l.group.name);
+    if (!g) { g = { id: uid(), name: l.group.name }; div.groups.push(g); }
+    l.groupId = g.id;
+    delete l.group;
+    changed = true;
+  }
+  return changed;
+}

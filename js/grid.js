@@ -101,7 +101,7 @@ function cardHTML(a) {
   else if (state.ui.mode === "teacher") line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'}`;
   else if (state.ui.mode === "subject") line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.teacher?escapeHtml(info.teacher.name):'—'}`;
   else                                  line2 = `${info.cls?escapeHtml(info.cls.name):'—'} · ${info.teacher?escapeHtml(info.teacher.name):'—'}`;
-  if (info.lesson.group) line2 += ` · ${escapeHtml(info.lesson.group.name)}`;
+  const g = lessonGroup(info.lesson); if (g) line2 += ` · ${escapeHtml(g.groupName)}`;
   const conf = conflicts.has(a.id) ? " conflict" : "";
   const placed = a.day != null;
   const locked = placed && a.locked;

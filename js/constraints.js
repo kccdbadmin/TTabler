@@ -48,9 +48,8 @@ function roomClash(la, lb) {
 // is a real clash. (Groups come from aSc import; no editing UI yet.)
 function classSlotClash(la, lb) {
   if (!la.classId || la.classId !== lb.classId) return false;
-  if (la.group && lb.group &&
-      la.group.division === lb.group.division &&
-      la.group.name !== lb.group.name) return false;
+  const ga = lessonGroup(la), gb = lessonGroup(lb);
+  if (ga && gb && ga.divisionKey === gb.divisionKey && ga.groupKey !== gb.groupKey) return false;
   return true;
 }
 

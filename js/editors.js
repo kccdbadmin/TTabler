@@ -142,7 +142,8 @@ function renderTabs() {
 function renderTabBody() {
   const el = $("#tab-body"); el.innerHTML = "";
   if (activeTab === "Lessons")  renderLessonsTab(el);
-  if (activeTab === "Classes")  renderSimpleTab(el, "classes", "Classes", "e.g. 7A, 8B, Year 9");
+  if (activeTab === "Classes")  groupsEditClassId ? renderClassGroups(el, groupsEditClassId)
+                                                   : renderSimpleTab(el, "classes", "Classes", "e.g. 7A, 8B, Year 9");
   if (activeTab === "Teachers") renderSimpleTab(el, "teachers", "Teachers", "e.g. Mr Adams");
   if (activeTab === "Subjects") renderSubjectsTab(el);
   if (activeTab === "Rooms")    renderSimpleTab(el, "rooms", "Rooms", "e.g. Room 101, Lab, Gym");
@@ -155,14 +156,18 @@ function renderSimpleTab(el, key, title, placeholder) {
   el.innerHTML = `<h3>${title}</h3><p class="hint">Abbrev box · the badge is load (periods/week), filled to show how full the week is and red when over the ⚙ cap or available slots. Click 👁 to see its timetable.</p>` + sortBarHTML();
   sortedEntities(state[key], field).forEach(item => {
     const row = document.createElement("div"); row.className = "row-item";
+    const groupCount = key === "classes" ? classGroupOptions(item.id).length : 0;
+    const grpBtn = key === "classes" ? `<span class="grp-btn" title="Divisions / groups">⊞${groupCount ? `<b>${groupCount}</b>` : ""}</span>` : "";
     row.innerHTML = `<input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
                      <input class="abbr" value="${escapeHtml(item.short || '')}" placeholder="abbr" title="Abbreviation" />
                      ${loadMeterHTML(key, field, item)}
+                     ${grpBtn}
                      <span class="cap-edit" title="Set max periods per week / per day">⚙</span>
                      <span class="view-ent" title="Show this timetable">👁</span>
                      <span class="x">×</span>`;
     row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
     row.querySelector(".abbr").onchange = e => { item.short = e.target.value.trim(); save(); refreshViews(); };
+    if (key === "classes") row.querySelector(".grp-btn").onclick = () => { groupsEditClassId = item.id; renderTabBody(); };
     row.querySelector(".cap-edit").onclick = () => editCaps(key, item.id);
     row.querySelector(".view-ent").onclick = () => viewEntity(mode, item.id);
     row.querySelector(".x").onclick = () => { removeEntity(key, item.id); };
@@ -217,13 +222,17 @@ function renderLessonsTab(el) {
   state.lessons.forEach(l => {
     const info = lessonInfo(l.id);
     const row = document.createElement("div"); row.className = "row-item";
-    const grp = l.group ? ` · <b>${escapeHtml(l.group.name)}</b>${l.group.division?` <span class="div-tag">${escapeHtml(l.group.division)}</span>`:''}` : "";
+    const opts = classGroupOptions(l.classId);
+    const grpSel = `<select class="grp-sel" title="Group (define groups on the class with ⊞)">
+        <option value="">Whole class</option>
+        ${opts.map(o => `<option value="${o.id}"${o.id === l.groupId ? " selected" : ""}>${escapeHtml(o.label)}</option>`).join("")}
+      </select>`;
     row.innerHTML = `<span class="swatch" style="background:${info.subject?safeColor(info.subject.color):'#888'}"></span>
       <span class="label">${info.cls?escapeHtml(info.cls.name):'?'} · ${info.subject?escapeHtml(info.subject.name):'?'}
-        <span class="sub">${info.teacher?escapeHtml(info.teacher.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'} · ${l.count}/wk${grp}</span></span>
-      <span class="grp-edit" title="Set group / division (lets two splits of a class share a slot)">👥</span>
+        <span class="sub">${info.teacher?escapeHtml(info.teacher.name):'—'} · ${info.room?escapeHtml(info.room.name):'—'} · ${l.count}/wk</span></span>
+      ${grpSel}
       <span class="x">×</span>`;
-    row.querySelector(".grp-edit").onclick = () => editGroup(l.id);
+    row.querySelector(".grp-sel").onchange = e => { l.groupId = e.target.value || null; save(); render(); };
     row.querySelector(".x").onclick = () => {
       state.lessons = state.lessons.filter(x => x.id !== l.id);
       state.assignments = state.assignments.filter(a => a.lessonId !== l.id);
@@ -234,20 +243,25 @@ function renderLessonsTab(el) {
 
   const add = document.createElement("div"); add.className = "add-card";
   const opt = (arr, blank) => (blank?`<option value="">${blank}</option>`:"") + arr.map(x => `<option value="${x.id}">${escapeHtml(x.name)}</option>`).join("");
+  const grpOpt = cid => `<option value="">Whole class</option>` +
+    classGroupOptions(cid).map(o => `<option value="${o.id}">${escapeHtml(o.label)}</option>`).join("");
   add.innerHTML = `
     <div class="form-grid">
       <div><label class="fld">Class</label><select id="nl-class">${opt(state.classes)}</select></div>
       <div><label class="fld">Subject</label><select id="nl-subject">${opt(state.subjects)}</select></div>
       <div><label class="fld">Teacher</label><select id="nl-teacher">${opt(state.teachers,"—")}</select></div>
       <div><label class="fld">Room</label><select id="nl-room">${opt(state.rooms,"—")}</select></div>
+      <div><label class="fld">Group</label><select id="nl-group">${grpOpt(state.classes[0] ? state.classes[0].id : "")}</select></div>
       <div><label class="fld">Periods / week</label><input id="nl-count" type="number" min="1" max="20" value="3" /></div>
     </div>
     <button class="primary">+ Add lesson</button>`;
+  // group options depend on the chosen class
+  add.querySelector("#nl-class").onchange = e => { $("#nl-group").innerHTML = grpOpt(e.target.value); };
   add.querySelector("button").onclick = () => {
     const classId = $("#nl-class").value, subjectId = $("#nl-subject").value;
     if (!classId || !subjectId) { toast("Pick a class and subject"); return; }
     const count = Math.max(1, parseInt($("#nl-count").value) || 1);
-    const lesson = { id: uid(), classId, subjectId, teacherId: $("#nl-teacher").value || null, roomId: $("#nl-room").value || null, count };
+    const lesson = { id: uid(), classId, subjectId, teacherId: $("#nl-teacher").value || null, roomId: $("#nl-room").value || null, groupId: $("#nl-group").value || null, count };
     state.lessons.push(lesson);
     for (let i = 0; i < count; i++) state.assignments.push({ id: uid(), lessonId: lesson.id, day:null, period:null });
     save(); renderTabBody(); render();
@@ -255,17 +269,67 @@ function renderLessonsTab(el) {
   el.appendChild(add);
 }
 
-// Set / change / clear a lesson's group + division. Two lessons of the same
-// class in the same division but different groups (e.g. Boys vs Girls) are
-// allowed to share a slot — see classSlotClash() in constraints.js.
-function editGroup(lessonId) {
-  const l = byId(state.lessons, lessonId); if (!l) return;
-  const name = prompt("Group name (e.g. Boys, Girls, Set 1). Leave blank to clear:", l.group ? l.group.name : "");
-  if (name === null) return;
-  if (!name.trim()) { delete l.group; save(); renderTabBody(); render(); toast("Group cleared"); return; }
-  const division = prompt("Division this group belongs to (e.g. Gender, Ability).\nGroups in the SAME division can share a time slot.", l.group ? l.group.division : "") || "";
-  l.group = { name: name.trim(), division: division.trim() };
-  save(); renderTabBody(); render(); toast("Group set");
+// Which class's divisions/groups are being edited (a sub-screen of the
+// Classes tab). null = show the normal class list.
+let groupsEditClassId = null;
+
+// Per-class divisions & groups editor. Pure structure: a division is a way the
+// class splits (e.g. "Gender"); a group is a part of it (e.g. "Boys").
+function renderClassGroups(el, classId) {
+  const cls = byId(state.classes, classId);
+  if (!cls) { groupsEditClassId = null; renderSimpleTab(el, "classes", "Classes", ""); return; }
+  cls.divisions = cls.divisions || [];
+
+  const head = document.createElement("div");
+  head.innerHTML = `<button class="ghost" id="grp-back" style="margin-bottom:8px">← Classes</button>
+    <h3>Groups — ${escapeHtml(cls.name)}</h3>
+    <p class="hint">A <b>division</b> is a way this class splits (Gender, Ability). Two different groups of the <b>same</b> division can share a time slot (disjoint students); different divisions can't.</p>`;
+  el.appendChild(head);
+  head.querySelector("#grp-back").onclick = () => { groupsEditClassId = null; renderTabBody(); };
+
+  cls.divisions.forEach(div => {
+    const box = document.createElement("div"); box.className = "div-box";
+    box.innerHTML = `<div class="div-head">
+        <input class="div-name label" value="${escapeHtml(div.name)}" />
+        <span class="x" title="Remove division">×</span>
+      </div>
+      <div class="grp-list"></div>
+      <div class="grp-add"><input placeholder="+ group (e.g. Boys)" /><button class="ghost">Add</button></div>`;
+    box.querySelector(".div-name").onchange = e => { div.name = e.target.value.trim() || div.name; save(); render(); };
+    box.querySelector(".div-head .x").onclick = () => {
+      const goneIds = div.groups.map(g => g.id);
+      state.lessons.forEach(l => { if (goneIds.includes(l.groupId)) l.groupId = null; });
+      cls.divisions = cls.divisions.filter(d => d.id !== div.id);
+      save(); renderTabBody(); render();
+    };
+    const list = box.querySelector(".grp-list");
+    div.groups.forEach(g => {
+      const r = document.createElement("div"); r.className = "grp-row";
+      r.innerHTML = `<input class="label" value="${escapeHtml(g.name)}" /><span class="x" title="Remove group">×</span>`;
+      r.querySelector("input").onchange = e => { g.name = e.target.value.trim() || g.name; save(); render(); };
+      r.querySelector(".x").onclick = () => {
+        state.lessons.forEach(l => { if (l.groupId === g.id) l.groupId = null; });
+        div.groups = div.groups.filter(x => x.id !== g.id);
+        save(); renderTabBody(); render();
+      };
+      list.appendChild(r);
+    });
+    const addG = box.querySelector(".grp-add");
+    addG.querySelector("button").onclick = () => {
+      const v = addG.querySelector("input").value.trim(); if (!v) return;
+      div.groups.push({ id: uid(), name: v }); save(); renderTabBody();
+    };
+    addG.querySelector("input").addEventListener("keydown", e => { if (e.key === "Enter") addG.querySelector("button").click(); });
+    el.appendChild(box);
+  });
+
+  const addDiv = document.createElement("div"); addDiv.className = "add-card";
+  addDiv.innerHTML = `<input placeholder="+ division (e.g. Gender, Ability)" /><button class="primary">+ Add division</button>`;
+  addDiv.querySelector("button").onclick = () => {
+    const v = addDiv.querySelector("input").value.trim(); if (!v) return;
+    cls.divisions.push({ id: uid(), name: v, groups: [] }); save(); renderTabBody();
+  };
+  el.appendChild(addDiv);
 }
 
 function renderTimeTab(el) {
