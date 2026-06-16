@@ -52,6 +52,42 @@ function entityLoad(field, id) {
   return periods;
 }
 
+// Slots an entity can actually use = all existing slots minus its own time-off.
+// Drives the fullness meter (load vs available).
+function entityAvailable(key, id) {
+  const e = byId(state[key], id);
+  const off = (e && e.off) || [];
+  let blocked = 0;
+  for (const k of off) { const [d, p] = k.split("|").map(Number); if (slotExists(d, p)) blocked++; }
+  return Math.max(0, totalSlots() - blocked);
+}
+
+// Set per-week / per-day ceilings on an entity (teacher/class/room).
+function editCaps(key, id) {
+  const e = byId(state[key], id); if (!e) return;
+  const w = prompt("Max periods per WEEK for " + (e.name || "this") + " (blank = no limit):", e.maxWeek != null ? e.maxWeek : "");
+  if (w === null) return;
+  const d = prompt("Max periods per DAY (blank = no limit):", e.maxDay != null ? e.maxDay : "");
+  if (d === null) return;
+  e.maxWeek = w.trim() === "" ? null : Math.max(0, parseInt(w) || 0);
+  e.maxDay  = d.trim() === "" ? null : Math.max(0, parseInt(d) || 0);
+  save(); renderTabBody(); render();
+}
+
+// The load badge doubles as a fullness meter: fill = load ÷ (cap or available),
+// red when load exceeds the cap or the slots actually available.
+function loadMeterHTML(key, field, item) {
+  const load = entityLoad(field, item.id);
+  const avail = entityAvailable(key, item.id);
+  const cap = item.maxWeek;
+  const scale = (cap != null ? cap : avail) || 1;
+  const pct = Math.min(100, Math.round(load / scale * 100));
+  const over = (cap != null && load > cap) || load > avail;
+  const capTxt = cap != null ? ` · cap ${cap}/wk${item.maxDay != null ? `, ${item.maxDay}/day` : ""}` : "";
+  const title = `${load} periods/week · ${avail} slots available${capTxt}`;
+  return `<span class="load-meter${over ? " over" : ""}" style="--fill:${pct}%" title="${escapeHtml(title)}">${load}${cap != null ? "/" + cap : ""}</span>`;
+}
+
 // ---- list sorting (Name / Load), shared by the entity tabs ----
 // "manual" keeps the stored order until the user clicks a sort header.
 let entitySort = { key: "manual", dir: 1 };
@@ -116,17 +152,18 @@ function renderTabBody() {
 function renderSimpleTab(el, key, title, placeholder) {
   const mode = { classes:"class", teachers:"teacher", rooms:"room" }[key];
   const field = { classes:"classId", teachers:"teacherId", rooms:"roomId" }[key];
-  el.innerHTML = `<h3>${title}</h3><p class="hint">Small box = abbreviation · badge = periods/week (load). Click 👁 to see its timetable.</p>` + sortBarHTML();
+  el.innerHTML = `<h3>${title}</h3><p class="hint">Abbrev box · the badge is load (periods/week), filled to show how full the week is and red when over the ⚙ cap or available slots. Click 👁 to see its timetable.</p>` + sortBarHTML();
   sortedEntities(state[key], field).forEach(item => {
-    const load = entityLoad(field, item.id);
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
                      <input class="abbr" value="${escapeHtml(item.short || '')}" placeholder="abbr" title="Abbreviation" />
-                     <span class="load" title="${load} periods/week">${load}</span>
+                     ${loadMeterHTML(key, field, item)}
+                     <span class="cap-edit" title="Set max periods per week / per day">⚙</span>
                      <span class="view-ent" title="Show this timetable">👁</span>
                      <span class="x">×</span>`;
     row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
     row.querySelector(".abbr").onchange = e => { item.short = e.target.value.trim(); save(); refreshViews(); };
+    row.querySelector(".cap-edit").onclick = () => editCaps(key, item.id);
     row.querySelector(".view-ent").onclick = () => viewEntity(mode, item.id);
     row.querySelector(".x").onclick = () => { removeEntity(key, item.id); };
     el.appendChild(row);

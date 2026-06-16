@@ -197,10 +197,23 @@ body.timeoff-mode .grid-wrap { outline: 2px dashed var(--warn); outline-offset: 
   min-width: 22px; text-align: center;
 }
 .row-item .abbr {
-  flex: 0 0 auto; width: 48px; font-size: 11px; color: var(--muted);
+  flex: 0 0 auto; width: 44px; font-size: 11px; color: var(--muted);
   background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px;
 }
 .row-item .abbr:focus { color: var(--text); border-color: var(--accent); outline: none; }
+/* Load badge that doubles as a fullness meter (fill = load / cap-or-available) */
+.row-item .load-meter {
+  flex: 0 0 auto; min-width: 30px; text-align: center; color: var(--text);
+  border: 1px solid var(--border); border-radius: 9px; padding: 0 6px;
+  font-size: 10px; font-weight: 600;
+  background: linear-gradient(to right, rgba(79,156,249,.5) var(--fill,0%), var(--bg) var(--fill,0%));
+}
+.row-item .load-meter.over {
+  border-color: var(--danger); color: var(--danger);
+  background: linear-gradient(to right, rgba(249,112,102,.45) var(--fill,0%), var(--bg) var(--fill,0%));
+}
+.row-item .cap-edit { cursor: pointer; padding: 0 3px; font-size: 12px; opacity: .65; }
+.row-item .cap-edit:hover { opacity: 1; }
 
 /* Sort bar above the entity lists */
 .sort-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }

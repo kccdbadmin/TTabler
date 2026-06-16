@@ -45,18 +45,36 @@ function generate() {
   // Locked + placed cards are kept exactly where they are.
   const isPinned = a => a.locked && a.day != null;
 
+  // Load ceilings: don't let an entity exceed its maxWeek / maxDay.
+  const capArrs = [[state.classes, "classId"], [state.teachers, "teacherId"], [state.rooms, "roomId"]];
+
   let best = null, bestPlaced = -1;
   const RESTARTS = 40;
   for (let r = 0; r < RESTARTS; r++) {
     const placement = {}; // key -> [lesson]
     const spread = new Map(); // "classId|subjectId" -> { day: count }
+    const wk = { classId:{}, teacherId:{}, roomId:{} }; // per-entity periods this week
+    const dy = {};                                       // field+id+"|"+day -> periods that day
+    const bumpCap = (lesson, day) => {
+      for (const [, f] of capArrs) { const id = lesson[f]; if (!id) continue;
+        wk[f][id] = (wk[f][id] || 0) + 1; const k = f + id + "|" + day; dy[k] = (dy[k] || 0) + 1; }
+    };
+    const capOK = (lesson, day) => {
+      for (const [arr, f] of capArrs) {
+        const id = lesson[f]; if (!id) continue;
+        const e = byId(arr, id); if (!e) continue;
+        if (e.maxWeek != null && (wk[f][id] || 0) + 1 > e.maxWeek) return false;
+        if (e.maxDay != null && (dy[f + id + "|" + day] || 0) + 1 > e.maxDay) return false;
+      }
+      return true;
+    };
     // keep pinned cards in place; reset the rest to unplaced
     const result = state.assignments.map(a => isPinned(a) ? { ...a } : ({ ...a, day:null, period:null }));
     for (const a of result) {
       if (!(a.locked && a.day != null)) continue;
       const l = lessonById.get(a.lessonId); if (!l) continue;
       (placement[a.day + "|" + a.period] = placement[a.day + "|" + a.period] || []).push(l);
-      bumpSpread(spread, l, a.day);
+      bumpSpread(spread, l, a.day); bumpCap(l, a.day);
     }
     // schedule hardest first: more constrained lessons (bigger count) first, shuffle for variety
     const order = result.filter(a => !(a.locked && a.day != null)).sort((a,b) => {
@@ -66,7 +84,7 @@ function generate() {
     let placed = result.length - order.length; // pinned count
     for (const a of order) {
       const lesson = lessonById.get(a.lessonId); if (!lesson) continue;
-      const cand = slotList.filter(s => fits(placement, lesson, s));
+      const cand = slotList.filter(s => fits(placement, lesson, s) && capOK(lesson, s.day));
       if (!cand.length) continue;
       // prefer days with fewer of this class+subject already on them (spread out)
       const byDay = spread.get(lesson.classId + "|" + lesson.subjectId);
@@ -74,7 +92,7 @@ function generate() {
       const slot = cand[0];
       a.day = slot.day; a.period = slot.period;
       (placement[slot.day + "|" + slot.period] = placement[slot.day + "|" + slot.period] || []).push(lesson);
-      bumpSpread(spread, lesson, slot.day);
+      bumpSpread(spread, lesson, slot.day); bumpCap(lesson, slot.day);
       placed++;
     }
     if (placed > bestPlaced) { bestPlaced = placed; best = result; if (placed === result.length) break; }
