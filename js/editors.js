@@ -52,6 +52,36 @@ function entityLoad(field, id) {
   return periods;
 }
 
+// ---- list sorting (Name / Load), shared by the entity tabs ----
+// "manual" keeps the stored order until the user clicks a sort header.
+let entitySort = { key: "manual", dir: 1 };
+function sortedEntities(list, field) {
+  if (entitySort.key === "manual") return list;
+  const copy = [...list];
+  copy.sort((a, b) => {
+    let va, vb;
+    if (entitySort.key === "load") { va = entityLoad(field, a.id); vb = entityLoad(field, b.id); }
+    else { va = (a.name || "").toLowerCase(); vb = (b.name || "").toLowerCase(); }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * entitySort.dir;
+  });
+  return copy;
+}
+function sortBarHTML() {
+  const ind = k => entitySort.key === k ? `<span class="dir">${entitySort.dir > 0 ? "▲" : "▼"}</span>` : "";
+  const cls = k => "sort-btn" + (entitySort.key === k ? " active" : "");
+  return `<div class="sort-bar"><span class="sb-label">Sort</span>
+    <button class="${cls('name')}" data-sort="name">Name ${ind('name')}</button>
+    <button class="${cls('load')}" data-sort="load">Load ${ind('load')}</button></div>`;
+}
+function bindSortBar(el) {
+  el.querySelectorAll(".sort-bar .sort-btn").forEach(b => b.onclick = () => {
+    const k = b.dataset.sort;
+    if (entitySort.key === k) entitySort.dir *= -1;        // toggle direction
+    else entitySort = { key: k, dir: k === "load" ? -1 : 1 }; // load defaults heaviest-first
+    renderTabBody();
+  });
+}
+
 // Focus the grid on a single entity and show every card related to it
 // (aSc-style drill-in). Leaves the overview and closes the drawer.
 function viewEntity(mode, id) {
@@ -86,19 +116,22 @@ function renderTabBody() {
 function renderSimpleTab(el, key, title, placeholder) {
   const mode = { classes:"class", teachers:"teacher", rooms:"room" }[key];
   const field = { classes:"classId", teachers:"teacherId", rooms:"roomId" }[key];
-  el.innerHTML = `<h3>${title}</h3><p class="hint">The badge is periods/week (the load). Click 👁 to see its timetable. Add, rename or remove (removing one also removes lessons that use it).</p>`;
-  state[key].forEach(item => {
+  el.innerHTML = `<h3>${title}</h3><p class="hint">Small box = abbreviation · badge = periods/week (load). Click 👁 to see its timetable.</p>` + sortBarHTML();
+  sortedEntities(state[key], field).forEach(item => {
     const load = entityLoad(field, item.id);
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
+                     <input class="abbr" value="${escapeHtml(item.short || '')}" placeholder="abbr" title="Abbreviation" />
                      <span class="load" title="${load} periods/week">${load}</span>
                      <span class="view-ent" title="Show this timetable">👁</span>
                      <span class="x">×</span>`;
-    row.querySelector("input").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
+    row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
+    row.querySelector(".abbr").onchange = e => { item.short = e.target.value.trim(); save(); refreshViews(); };
     row.querySelector(".view-ent").onclick = () => viewEntity(mode, item.id);
     row.querySelector(".x").onclick = () => { removeEntity(key, item.id); };
     el.appendChild(row);
   });
+  bindSortBar(el);
   const add = document.createElement("div"); add.className = "add-card";
   add.innerHTML = `<input id="new-name" placeholder="${placeholder}" /><button class="primary">+ Add</button>`;
   add.querySelector("button").onclick = () => {
@@ -110,22 +143,25 @@ function renderSimpleTab(el, key, title, placeholder) {
 }
 
 function renderSubjectsTab(el) {
-  el.innerHTML = `<h3>Subjects</h3><p class="hint">The badge is periods/week (the load). Colours show on the cards. Click 👁 to see every lesson of a subject.</p>`;
-  state.subjects.forEach(item => {
+  el.innerHTML = `<h3>Subjects</h3><p class="hint">Small box = abbreviation · badge = periods/week (load). Colours show on the cards. Click 👁 to see every lesson.</p>` + sortBarHTML();
+  sortedEntities(state.subjects, "subjectId").forEach(item => {
     const load = entityLoad("subjectId", item.id);
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<span class="swatch" style="background:${safeColor(item.color)}"></span>
       <input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
-      <input type="color" value="${safeColor(item.color)}" style="width:30px;height:24px;padding:1px" />
+      <input class="abbr" value="${escapeHtml(item.short || '')}" placeholder="abbr" title="Abbreviation" />
+      <input type="color" value="${safeColor(item.color)}" style="width:28px;height:24px;padding:1px" />
       <span class="load" title="${load} periods/week">${load}</span>
       <span class="view-ent" title="Show this subject's lessons">👁</span>
       <span class="x">×</span>`;
     row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
+    row.querySelector(".abbr").onchange = e => { item.short = e.target.value.trim(); save(); refreshViews(); };
     row.querySelector('input[type=color]').oninput = e => { item.color = e.target.value; row.querySelector(".swatch").style.background = e.target.value; save(); render(); };
     row.querySelector(".view-ent").onclick = () => viewEntity("subject", item.id);
     row.querySelector(".x").onclick = () => removeEntity("subjects", item.id);
     el.appendChild(row);
   });
+  bindSortBar(el);
   const add = document.createElement("div"); add.className = "add-card";
   add.innerHTML = `<input id="new-name" placeholder="e.g. Geography" /><button class="primary">+ Add subject</button>`;
   add.querySelector("button").onclick = () => {

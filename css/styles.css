@@ -190,6 +190,18 @@ body.timeoff-mode .grid-wrap { outline: 2px dashed var(--warn); outline-offset: 
   border-radius: 9px; padding: 0 6px; font-size: 10px; font-weight: 600;
   min-width: 22px; text-align: center;
 }
+.row-item .abbr {
+  flex: 0 0 auto; width: 48px; font-size: 11px; color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px;
+}
+.row-item .abbr:focus { color: var(--text); border-color: var(--accent); outline: none; }
+
+/* Sort bar above the entity lists */
+.sort-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.sort-bar .sb-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.sort-btn { padding: 3px 9px; font-size: 11px; }
+.sort-btn.active { background: var(--accent-d); border-color: var(--accent); color: var(--text); }
+.sort-btn .dir { font-size: 9px; margin-left: 1px; }
 .tt.overview .cls-h { cursor: pointer; }
 .tt.overview .cls-h:hover { color: var(--accent); }
 
