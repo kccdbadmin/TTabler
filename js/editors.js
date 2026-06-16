@@ -44,6 +44,14 @@ function closeDataEditor() {
   $("#data-buttons").querySelectorAll(".data-btn").forEach(b => b.classList.remove("active"));
 }
 
+// Teaching load for an entity = total periods/week across the lessons that
+// reference it (sum of lesson.count). Shown as a badge in the data lists.
+function entityLoad(field, id) {
+  let periods = 0;
+  for (const l of state.lessons) if (l[field] === id) periods += (l.count || 0);
+  return periods;
+}
+
 // Focus the grid on a single entity and show every card related to it
 // (aSc-style drill-in). Leaves the overview and closes the drawer.
 function viewEntity(mode, id) {
@@ -77,10 +85,13 @@ function renderTabBody() {
 
 function renderSimpleTab(el, key, title, placeholder) {
   const mode = { classes:"class", teachers:"teacher", rooms:"room" }[key];
-  el.innerHTML = `<h3>${title}</h3><p class="hint">Click 👁 to see its timetable. Add, rename or remove (removing one also removes lessons that use it).</p>`;
+  const field = { classes:"classId", teachers:"teacherId", rooms:"roomId" }[key];
+  el.innerHTML = `<h3>${title}</h3><p class="hint">The badge is periods/week (the load). Click 👁 to see its timetable. Add, rename or remove (removing one also removes lessons that use it).</p>`;
   state[key].forEach(item => {
+    const load = entityLoad(field, item.id);
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
+                     <span class="load" title="${load} periods/week">${load}</span>
                      <span class="view-ent" title="Show this timetable">👁</span>
                      <span class="x">×</span>`;
     row.querySelector("input").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
@@ -99,12 +110,14 @@ function renderSimpleTab(el, key, title, placeholder) {
 }
 
 function renderSubjectsTab(el) {
-  el.innerHTML = `<h3>Subjects</h3><p class="hint">Colours show up on the timetable cards. Click 👁 to see every lesson of a subject.</p>`;
+  el.innerHTML = `<h3>Subjects</h3><p class="hint">The badge is periods/week (the load). Colours show on the cards. Click 👁 to see every lesson of a subject.</p>`;
   state.subjects.forEach(item => {
+    const load = entityLoad("subjectId", item.id);
     const row = document.createElement("div"); row.className = "row-item";
     row.innerHTML = `<span class="swatch" style="background:${safeColor(item.color)}"></span>
       <input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
       <input type="color" value="${safeColor(item.color)}" style="width:30px;height:24px;padding:1px" />
+      <span class="load" title="${load} periods/week">${load}</span>
       <span class="view-ent" title="Show this subject's lessons">👁</span>
       <span class="x">×</span>`;
     row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };

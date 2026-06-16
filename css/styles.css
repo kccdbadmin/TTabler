@@ -185,6 +185,11 @@ body.timeoff-mode .grid-wrap { outline: 2px dashed var(--warn); outline-offset: 
 .row-item .grp-edit:hover { opacity: 1; }
 .row-item .view-ent { cursor: pointer; padding: 0 4px; font-size: 13px; opacity: .7; }
 .row-item .view-ent:hover { opacity: 1; }
+.row-item .load {
+  flex: 0 0 auto; background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 9px; padding: 0 6px; font-size: 10px; font-weight: 600;
+  min-width: 22px; text-align: center;
+}
 .tt.overview .cls-h { cursor: pointer; }
 .tt.overview .cls-h:hover { color: var(--accent); }
 
