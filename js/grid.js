@@ -51,7 +51,7 @@ function render() {
 function renderOverview() {
   const wrap = $("#grid-wrap");
   if (!state.classes.length) { wrap.innerHTML = `<div class="empty-state">No classes yet. Add some from the toolbar.</div>`; return; }
-  const D = state.days.length, P = state.periods.length;
+  const D = state.days.length;
   const byClass = {}; // classId -> "day|period" -> [assignment]
   state.assignments.forEach(a => {
     if (a.day == null) return;
@@ -61,13 +61,13 @@ function renderOverview() {
   });
 
   let html = `<table class="tt overview"><thead><tr><th class="ov-corner" rowspan="2">Class</th>`;
-  state.days.forEach(d => html += `<th class="day-h" colspan="${P}">${escapeHtml(d)}</th>`);
+  state.days.forEach((d, di) => html += `<th class="day-h" colspan="${periodsOnDay(di)}">${escapeHtml(d)}</th>`);
   html += `</tr><tr>`;
-  state.days.forEach(() => state.periods.forEach(p => html += `<th class="per-h">${escapeHtml(p)}</th>`));
+  state.days.forEach((d, di) => { for (let p = 0; p < periodsOnDay(di); p++) html += `<th class="per-h">${escapeHtml(state.periods[p])}</th>`; });
   html += `</tr></thead><tbody>`;
   state.classes.forEach(c => {
     html += `<tr><th class="cls-h" data-cls="${c.id}" title="Show ${escapeHtml(c.name)}'s timetable">${escapeHtml(c.name)}</th>`;
-    for (let d = 0; d < D; d++) for (let p = 0; p < P; p++) {
+    for (let d = 0; d < D; d++) for (let p = 0; p < periodsOnDay(d); p++) {
       const cards = ((byClass[c.id] || {})[d + "|" + p] || []).map(ovCardHTML).join("");
       html += `<td class="ov-cell">${cards}</td>`;
     }
@@ -139,6 +139,7 @@ function renderGrid() {
   state.periods.forEach((p, pi) => {
     html += `<tr><th>${escapeHtml(p)}</th>`;
     state.days.forEach((d, di) => {
+      if (!slotExists(di, pi)) { html += `<td class="noslot" title="No period ${escapeHtml(p)} on ${escapeHtml(d)}"></td>`; return; }
       const cards = (grid[di + "|" + pi] || []).map(cardHTML).join("");
       const off = offSet.has(di + "|" + pi) ? " off" : "";
       html += `<td class="cell${off}" data-day="${di}" data-period="${pi}"><div class="cell-cards">${cards}</div></td>`;

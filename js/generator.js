@@ -11,7 +11,7 @@
 function generate() {
   const { days, periods } = state;
   const slotList = [];
-  for (let d = 0; d < days.length; d++) for (let p = 0; p < periods.length; p++) slotList.push({ day:d, period:p });
+  for (let d = 0; d < days.length; d++) for (let p = 0; p < periodsOnDay(d); p++) slotList.push({ day:d, period:p });
 
   // O(1) lesson lookup — byId() is a linear scan, and the inner loops below
   // hit it thousands of times. On a big timetable that alone froze the tab.

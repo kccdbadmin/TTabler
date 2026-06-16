@@ -232,20 +232,35 @@ function editGroup(lessonId) {
 }
 
 function renderTimeTab(el) {
-  el.innerHTML = `<h3>Days & periods</h3><p class="hint">Comma-separated. These define the grid columns (days) and rows (periods).</p>
-    <label class="fld">Days</label><input id="t-days" value="${state.days.join(', ')}" />
-    <label class="fld">Periods</label><input id="t-periods" value="${state.periods.join(', ')}" />
-    <button class="primary" id="t-save" style="width:100%;margin-top:12px">Apply</button>`;
+  el.innerHTML = `<h3>Days &amp; periods</h3><p class="hint">Comma-separated. Days are columns, periods are rows. Per-day counts let a day be shorter (e.g. Friday) — set how many of the periods above each day actually has.</p>
+    <label class="fld">Days</label><input id="t-days" value="${escapeHtml(state.days.join(', '))}" />
+    <label class="fld">Periods</label><input id="t-periods" value="${escapeHtml(state.periods.join(', '))}" />
+    <label class="fld">Periods per day</label>
+    <div class="ppd-grid" id="t-ppd">
+      ${state.days.map((d, i) => `<div class="ppd-cell"><span>${escapeHtml(d)}</span><input type="number" min="0" max="${state.periods.length}" value="${periodsOnDay(i)}" data-day="${i}" /></div>`).join("")}
+    </div>
+    <p class="hint" style="margin-top:8px">Editing Days resets per-day counts to full — set Days first, Apply, then adjust per-day counts.</p>
+    <button class="primary" id="t-save" style="width:100%;margin-top:8px">Apply</button>`;
   $("#t-save").onclick = () => {
     const days = $("#t-days").value.split(",").map(s=>s.trim()).filter(Boolean);
     const periods = $("#t-periods").value.split(",").map(s=>s.trim()).filter(Boolean);
     if (!days.length || !periods.length) { toast("Need at least one day and period"); return; }
-    // clamp existing placements to new bounds
-    state.assignments.forEach(a => {
-      if (a.day != null && a.day >= days.length) { a.day = null; a.period = null; }
-      if (a.period != null && a.period >= periods.length) { a.day = null; a.period = null; }
-    });
+    // per-day period counts — keep only if the day list is unchanged, else default to full
+    let perDay = null;
+    const sameDays = days.length === state.days.length && days.every((d, i) => d === state.days[i]);
+    if (sameDays) {
+      perDay = [...$("#t-ppd").querySelectorAll("input")].map(inp => {
+        const n = parseInt(inp.value); return isNaN(n) ? periods.length : Math.max(0, Math.min(n, periods.length));
+      });
+    }
     state.days = days; state.periods = periods;
+    state.periodsPerDay = perDay; // null => every day uses all periods
+    // clamp existing placements to slots that still exist
+    state.assignments.forEach(a => {
+      if (a.day != null && (a.day >= days.length || a.period >= periods.length || !slotExists(a.day, a.period))) {
+        a.day = null; a.period = null;
+      }
+    });
     save(); render(); toast("Time structure updated");
   };
 }

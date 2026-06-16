@@ -100,3 +100,20 @@ function currentEntity() {
   const list = entitiesForMode(state.ui.mode);
   return byId(list, state.ui.entity) || null;
 }
+
+// ---- Period structure -------------------------------------------------------
+// `state.periods` is the master list of period labels (the most any day has).
+// `state.periodsPerDay[d]` optionally shortens a given day (e.g. Friday). When
+// absent, every day uses all periods. Slots beyond a day's count don't exist:
+// the grid blocks them, the generator skips them, fullness ignores them.
+function periodsOnDay(d) {
+  const ppd = state.periodsPerDay;
+  const n = (ppd && ppd[d] != null) ? ppd[d] : state.periods.length;
+  return Math.max(0, Math.min(n, state.periods.length));
+}
+function slotExists(d, p) { return p < periodsOnDay(d); }
+function totalSlots() {
+  let n = 0;
+  for (let d = 0; d < state.days.length; d++) n += periodsOnDay(d);
+  return n;
+}

@@ -152,6 +152,12 @@ table.tt tbody th {
 .cell-cards { position: absolute; inset: 3px; display: flex; gap: 3px; }
 .cell .card { flex: 1 1 0; min-width: 0; }
 .cell.drop-hover { background: rgba(79,156,249,.12); outline: 2px dashed var(--accent); outline-offset: -2px; }
+/* A slot that doesn't exist on this day (e.g. a short Friday) */
+td.noslot {
+  background: repeating-linear-gradient(45deg, var(--panel) 0, var(--panel) 6px, var(--bg) 6px, var(--bg) 12px);
+  opacity: .5;
+}
+.tt.overview td.noslot { background: var(--bg); }
 
 .card {
   position: relative;
@@ -202,6 +208,12 @@ body.timeoff-mode .grid-wrap { outline: 2px dashed var(--warn); outline-offset: 
 .sort-btn { padding: 3px 9px; font-size: 11px; }
 .sort-btn.active { background: var(--accent-d); border-color: var(--accent); color: var(--text); }
 .sort-btn .dir { font-size: 9px; margin-left: 1px; }
+
+/* Time tab: per-day period counts */
+.ppd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.ppd-cell { display: flex; flex-direction: column; gap: 2px; }
+.ppd-cell span { font-size: 11px; color: var(--muted); text-align: center; }
+.ppd-cell input { text-align: center; padding: 4px; }
 .tt.overview .cls-h { cursor: pointer; }
 .tt.overview .cls-h:hover { color: var(--accent); }
 
