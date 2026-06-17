@@ -45,7 +45,8 @@ function roomClash(la, lb) {
 // Two lessons of the SAME class may share a slot when they are different
 // groups of the same division (e.g. Boys vs Girls — disjoint students).
 // Anything else — entire-class vs group, different divisions, same group —
-// is a real clash. (Groups come from aSc import; no editing UI yet.)
+// is a real clash. (computeConflicts inlines this with cached groups; this
+// stays the single source of truth for the rule, used by the generator.)
 function classSlotClash(la, lb) {
   if (!la.classId || la.classId !== lb.classId) return false;
   const ga = lessonGroup(la), gb = lessonGroup(lb);

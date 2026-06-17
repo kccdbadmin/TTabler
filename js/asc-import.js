@@ -56,8 +56,8 @@ function parseAscXml(xmlText) {
   });
 
   // ---- groups (class divisions like Boys/Girls or sets) ----
-  // Minimal v1: remembered per-lesson so conflict detection can tell that two
-  // different groups of the same division can share a slot. No editing UI yet.
+  // Imported as legacy per-lesson {name, division}; migrateGroups() folds these
+  // into structured per-class divisions when the timetable opens in the editor.
   const grpMap = {}; // aSc group id -> {name, division, entire}
   doc.querySelectorAll("groups > group").forEach(el => {
     grpMap[attr(el, "id")] = {

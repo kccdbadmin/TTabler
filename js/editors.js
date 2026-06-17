@@ -1,9 +1,11 @@
 "use strict";
 //==================================================================
-// editors.js — the sidebar data editors (the tabbed panels where you
-// add/rename/remove classes, teachers, subjects, rooms and lessons,
-// and set days/periods).
-//   renderTabs, renderTabBody, removeEntity (+ per-tab renderers)
+// editors.js — the data editor drawer (opened from the toolbar). Tabbed
+// panels to add/rename/remove classes, teachers, subjects, rooms and lessons,
+// edit per-class divisions/groups, set load caps, and set days/periods.
+//   renderDataButtons, openDataEditor/closeDataEditor, renderTabs,
+//   renderTabBody, renderSimpleTab/renderSubjectsTab/renderLessonsTab,
+//   renderClassGroups, renderTimeTab, viewEntity, removeEntity
 //==================================================================
 
 const TABS = ["Lessons","Classes","Teachers","Subjects","Rooms","Time"];

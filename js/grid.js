@@ -119,7 +119,7 @@ function cardHTML(a) {
 function renderGrid() {
   const wrap = $("#grid-wrap");
   const list = entitiesForMode(state.ui.mode);
-  if (!list.length) { wrap.innerHTML = `<div class="empty-state">No ${state.ui.mode}s yet. Add some in the sidebar.</div>`; return; }
+  if (!list.length) { wrap.innerHTML = `<div class="empty-state">No ${state.ui.mode}s yet. Add some from the toolbar.</div>`; return; }
   if (!state.ui.entity) { wrap.innerHTML = `<div class="empty-state">Select one to view.</div>`; return; }
 
   // map slot -> assignment(s) visible in view

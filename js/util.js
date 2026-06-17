@@ -2,7 +2,7 @@
 //==================================================================
 // util.js — tiny shared helpers used everywhere.
 // Loaded first. Everything here is global (plain <script>, shared scope).
-//   $, uid, clone, toast, textOn, escapeHtml, PALETTE
+//   $, uid, toast, textOn, escapeHtml, PALETTE
 //==================================================================
 
 // console debug handle: inspect/poke the app from devtools via `TT`
@@ -10,7 +10,6 @@ window.TT = window.TT || {};
 
 const $ = (s, r = document) => r.querySelector(s);
 const uid = () => Math.random().toString(36).slice(2, 9);
-const clone = (o) => JSON.parse(JSON.stringify(o));
 
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("show");

@@ -186,9 +186,6 @@ body.timeoff-mode .cell { cursor: pointer; }
 body.timeoff-mode .cell:hover { background: rgba(246,196,83,.14); }
 body.timeoff-mode .grid-wrap { outline: 2px dashed var(--warn); outline-offset: -6px; }
 #btn-timeoff.active { background: var(--warn); color: #0b0f14; border-color: var(--warn); }
-.row-item .div-tag { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-size: 10px; color: var(--muted); }
-.row-item .grp-edit { cursor: pointer; padding: 0 4px; font-size: 13px; opacity: .7; }
-.row-item .grp-edit:hover { opacity: 1; }
 .row-item .grp-btn { cursor: pointer; padding: 0 4px; font-size: 12px; opacity: .7; white-space: nowrap; }
 .row-item .grp-btn:hover { opacity: 1; }
 .row-item .grp-btn b { font-size: 9px; color: var(--accent); margin-left: 1px; }
@@ -291,10 +288,6 @@ table.tt.overview { min-width: 0; width: auto; font-size: 10px; }
   opacity: 0; pointer-events: none; transition: .2s; z-index: 50;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
-kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 11px; }
-.pill-toggle { display: flex; gap: 4px; }
-.pill-toggle button { padding: 5px 10px; font-size: 12px; }
-.pill-toggle button.active { background: var(--accent-d); border-color: var(--accent); }
 
 /* Editor header: back link + timetable name */
 .back-link {

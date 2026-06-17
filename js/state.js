@@ -4,7 +4,9 @@
 // `state` is the single source of truth, a global mutated in place.
 // IMPORTANT: to load/replace data, use setState() (mutates in place) so
 // references in other files stay valid — never reassign `state` directly.
-//   state, setState, demoState, byId, lessonInfo, entitiesForMode
+//   state, setState, blankState, demoState, byId, lessonInfo,
+//   entitiesForMode, currentEntity, periodsOnDay/slotExists/totalSlots,
+//   lessonGroup, classGroupOptions, migrateGroups
 //==================================================================
 
 let state = null;
