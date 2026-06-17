@@ -16,6 +16,7 @@ function renderViewControls() {
   list.forEach(e => { const o = document.createElement("option"); o.value = e.id; o.textContent = e.name; sel.appendChild(o); });
   if (!list.find(e => e.id === state.ui.entity)) state.ui.entity = list.length ? list[0].id : null;
   sel.value = state.ui.entity || "";
+  const axis = $("#sel-axis"); if (axis) axis.value = state.ui.transpose ? "day" : "period";
 }
 
 // which assignments are visible in the current view
@@ -133,19 +134,35 @@ function renderGrid() {
   // slots where the viewed entity is marked unavailable (time-off)
   const offSet = new Set((currentEntity() || {}).off || []);
 
+  // One cell, keyed by day/period indices — DnD/time-off/shading are unaffected
+  // by orientation because the data-day/data-period stay the same either way.
+  const cellHTML = (di, pi, d, p) => {
+    if (!slotExists(di, pi)) return `<td class="noslot" title="No period ${escapeHtml(p)} on ${escapeHtml(d)}"></td>`;
+    const cards = (grid[di + "|" + pi] || []).map(cardHTML).join("");
+    const off = offSet.has(di + "|" + pi) ? " off" : "";
+    return `<td class="cell${off}" data-day="${di}" data-period="${pi}"><div class="cell-cards">${cards}</div></td>`;
+  };
+
+  // ui.transpose flips the axes: default is periods-as-rows / days-as-columns.
+  const transpose = !!(state.ui && state.ui.transpose);
   let html = `<table class="tt"><thead><tr><th></th>`;
-  state.days.forEach(d => html += `<th>${escapeHtml(d)}</th>`);
-  html += `</tr></thead><tbody>`;
-  state.periods.forEach((p, pi) => {
-    html += `<tr><th>${escapeHtml(p)}</th>`;
+  if (transpose) {
+    state.periods.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+    html += `</tr></thead><tbody>`;
     state.days.forEach((d, di) => {
-      if (!slotExists(di, pi)) { html += `<td class="noslot" title="No period ${escapeHtml(p)} on ${escapeHtml(d)}"></td>`; return; }
-      const cards = (grid[di + "|" + pi] || []).map(cardHTML).join("");
-      const off = offSet.has(di + "|" + pi) ? " off" : "";
-      html += `<td class="cell${off}" data-day="${di}" data-period="${pi}"><div class="cell-cards">${cards}</div></td>`;
+      html += `<tr><th>${escapeHtml(d)}</th>`;
+      state.periods.forEach((p, pi) => html += cellHTML(di, pi, d, p));
+      html += `</tr>`;
     });
-    html += `</tr>`;
-  });
+  } else {
+    state.days.forEach(d => html += `<th>${escapeHtml(d)}</th>`);
+    html += `</tr></thead><tbody>`;
+    state.periods.forEach((p, pi) => {
+      html += `<tr><th>${escapeHtml(p)}</th>`;
+      state.days.forEach((d, di) => html += cellHTML(di, pi, d, p));
+      html += `</tr>`;
+    });
+  }
   html += `</tbody></table>`;
   wrap.innerHTML = html;
   attachDnD();

@@ -51,6 +51,7 @@ $("#btn-import").onclick = () => $("#file-input").click();
 $("#file-input").onchange = e => { if (e.target.files[0]) importFile(e.target.files[0]); };
 $("#view-mode").onchange = e => { state.ui.mode = e.target.value; const l = entitiesForMode(e.target.value); state.ui.entity = l.length?l[0].id:null; save(); render(); };
 $("#view-entity").onchange = e => { state.ui.entity = e.target.value; save(); render(); };
+$("#sel-axis").onchange = e => { state.ui.transpose = e.target.value === "day"; save(); render(); };
 
 load();
 if (state) { // load() redirects to the library when there's nothing to open
