@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TTabler — Tests</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", sans-serif; background:#0f1419; color:#e6edf3; margin:0; padding:24px; }
+  h1 { font-size:18px; } h1 span { color:#4f9cf9; }
+  #summary { font-size:14px; margin:10px 0 18px; padding:8px 12px; border-radius:8px; display:inline-block; }
+  #summary.ok { background:rgba(61,220,151,.15); color:#3ddc97; }
+  #summary.bad { background:rgba(249,112,102,.15); color:#f97066; }
+  .grp { margin:14px 0 4px; color:#8b9aa8; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .case { padding:4px 0 4px 22px; position:relative; font-size:13px; border-bottom:1px solid #1a2129; }
+  .case::before { position:absolute; left:0; }
+  .pass::before { content:"✓"; color:#3ddc97; }
+  .fail::before { content:"✗"; color:#f97066; }
+  .fail { color:#f97066; }
+  .msg { color:#8b9aa8; font-size:12px; margin-left:6px; }
+</style>
+</head>
+<body>
+<h1>T<span>T</span>abler — test suite</h1>
+<p class="msg">Pure-logic tests (no build, no deps). Open this file in a browser; green = pass.</p>
+<div id="summary"></div>
+<div id="out"></div>
+
+<!-- logic modules only; DOM-touching ones (storage/grid/dnd) are stubbed below -->
+<script src="js/util.js"></script>
+<script src="js/state.js"></script>
+<script src="js/constraints.js"></script>
+<script src="js/generator.js"></script>
+<script>
+"use strict";
+// Stub the DOM/persistence hooks the logic calls so it runs headless.
+window.save = () => {};
+window.render = () => {};
+window.toast = () => {};
+
+const out = document.getElementById("out");
+let passed = 0, failed = 0, group = "";
+function describe(name) { group = name; const d = document.createElement("div"); d.className = "grp"; d.textContent = name; out.appendChild(d); }
+function ok(cond, name, detail) {
+  const d = document.createElement("div");
+  d.className = "case " + (cond ? "pass" : "fail");
+  d.innerHTML = name + (cond ? "" : ` <span class="msg">${detail || "expected truthy"}</span>`);
+  out.appendChild(d);
+  cond ? passed++ : failed++;
+  if (!cond) console.error("FAIL:", group, "—", name, detail || "");
+}
+const eq = (a, b, name) => ok(a === b, name, `got ${JSON.stringify(a)}, expected ${JSON.stringify(b)}`);
+
+// Minimal state builder
+function mk(over) {
+  const base = {
+    days:["Mon","Tue"], periods:["1","2","3"], periodsPerDay:null,
+    subjects:[{id:"s1",name:"PE",color:"#fff"}],
+    teachers:[{id:"t1",name:"Mr A"},{id:"t2",name:"Ms B"}],
+    classes:[{id:"c1",name:"5A"},{id:"c2",name:"5B"}],
+    rooms:[{id:"r1",name:"Gym"}],
+    lessons:[], assignments:[], ui:{mode:"class",entity:"c1"}, id:"test", name:"test"
+  };
+  return setState(Object.assign(base, over || {}));
+}
+const place = (lessonId, day, period, extra) => Object.assign({ id:uid(), lessonId, day, period }, extra);
+
+// ---------------------------------------------------------------- lookups
+describe("lookups");
+mk({ lessons:[
+  {id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:"r1",count:3},
+  {id:"l2",classId:"c1",subjectId:"s1",teacherId:"t2",roomId:"r1",count:2},
+]});
+eq(byId(state.classes,"c1").name, "5A", "byId finds a class");
+eq(byId(state.classes,"nope"), undefined, "byId returns undefined for a missing id");
+eq(entitiesForMode("subject").length, 1, "entitiesForMode('subject') returns subjects");
+eq(entitiesForMode("teacher").length, 2, "entitiesForMode('teacher') returns teachers");
+
+// ---------------------------------------------------------------- groups
+describe("groups & migration");
+mk({
+  classes:[{id:"c1",name:"5A"}],
+  lessons:[{id:"lB",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:1,group:{name:"Boys",division:"Gender"}}]
+});
+ok(migrateGroups(), "migrateGroups reports a change for legacy data");
+eq((byId(state.classes,"c1").divisions||[]).length, 1, "a division was created");
+eq(byId(state.classes,"c1").divisions[0].name, "Gender", "division named from legacy division tag");
+const bId = byId(state.classes,"c1").divisions[0].groups[0].id;
+eq(byId(state.lessons,"lB").groupId, bId, "lesson re-pointed to structured groupId");
+ok(byId(state.lessons,"lB").group === undefined, "legacy free-text group removed after migration");
+ok(!migrateGroups(), "migrateGroups is idempotent (no change second time)");
+const lg = lessonGroup(byId(state.lessons,"lB"));
+eq(lg.groupName, "Boys", "lessonGroup resolves structured group name");
+
+// ---------------------------------------------------------------- class/group clash rule
+describe("classSlotClash (group rules)");
+mk({
+  classes:[{id:"c1",name:"5A",divisions:[{id:"d1",name:"Gender",groups:[{id:"g1",name:"Boys"},{id:"g2",name:"Girls"}]}]}],
+  lessons:[
+    {id:"lB",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,groupId:"g1",count:1},
+    {id:"lG",classId:"c1",subjectId:"s1",teacherId:"t2",roomId:null,groupId:"g2",count:1},
+    {id:"lW",classId:"c1",subjectId:"s1",teacherId:"t2",roomId:null,count:1},
+  ]
+});
+ok(!classSlotClash(byId(state.lessons,"lB"), byId(state.lessons,"lG")), "Boys vs Girls (same division) → no clash");
+ok(classSlotClash(byId(state.lessons,"lB"), byId(state.lessons,"lB")), "same group → clash");
+ok(classSlotClash(byId(state.lessons,"lB"), byId(state.lessons,"lW")), "group vs whole-class → clash");
+
+// ---------------------------------------------------------------- computeConflicts
+describe("computeConflicts");
+mk({
+  classes:[{id:"c1",name:"5A",divisions:[{id:"d1",name:"Gender",groups:[{id:"g1",name:"Boys"},{id:"g2",name:"Girls"}]}]},{id:"c2",name:"5B"}],
+  lessons:[
+    {id:"lB",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:"r1",groupId:"g1",count:1},
+    {id:"lG",classId:"c1",subjectId:"s1",teacherId:"t2",roomId:"r1",groupId:"g2",count:1},
+    {id:"lX",classId:"c2",subjectId:"s1",teacherId:"t1",roomId:"r1",count:1},
+  ],
+  assignments:[ place("lB",0,0), place("lG",0,0), place("lX",1,0) ]
+});
+let c = computeConflicts();
+eq(c.size, 0, "disjoint groups + sharing a room (rooms non-binding) → no conflicts");
+// move 5B's lesson (teacher t1) onto Boys' slot → teacher clash
+byId(state.assignments, state.assignments.find(a=>a.lessonId==="lX").id).day = 0;
+state.assignments.find(a=>a.lessonId==="lX").period = 0;
+c = computeConflicts();
+const aB = state.assignments.find(a=>a.lessonId==="lB").id;
+const aX = state.assignments.find(a=>a.lessonId==="lX").id;
+ok(c.has(aB) && c.has(aX), "same teacher (t1) in two classes same slot → clash");
+
+// time-off violation
+mk({
+  classes:[{id:"c1",name:"5A",off:["0|0"]}],
+  lessons:[{id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:1}],
+  assignments:[ place("l1",0,0) ]
+});
+c = computeConflicts();
+eq(c.size, 1, "card on the class's time-off slot is flagged");
+
+// ---------------------------------------------------------------- periods per day
+describe("variable periods per day");
+mk({ days:["Mon","Tue","Wed"], periods:["1","2","3","4"], periodsPerDay:[4,4,2] });
+ok(slotExists(0,3), "Mon period 4 exists");
+ok(!slotExists(2,2), "Wed period 3 does not exist (short day)");
+eq(totalSlots(), 10, "totalSlots = 4+4+2");
+
+// ---------------------------------------------------------------- generator
+describe("generator");
+mk({
+  days:["Mon","Tue"], periods:["1","2","3"],
+  lessons:[
+    {id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:3},
+    {id:"l2",classId:"c2",subjectId:"s1",teacherId:"t2",roomId:null,count:3},
+  ],
+  assignments:[]
+});
+state.lessons.forEach(l => { for (let i=0;i<l.count;i++) state.assignments.push(place(l.id,null,null)); });
+generate();
+eq(state.assignments.filter(a=>a.day!=null).length, 6, "generator places all feasible cards");
+
+// caps: teacher t1 limited to 2/week
+mk({
+  days:["Mon","Tue"], periods:["1","2","3"],
+  teachers:[{id:"t1",name:"Mr A",maxWeek:2},{id:"t2",name:"Ms B"}],
+  lessons:[{id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:4}],
+  assignments:[]
+});
+for (let i=0;i<4;i++) state.assignments.push(place("l1",null,null));
+generate();
+ok(state.assignments.filter(a=>a.day!=null).length <= 2, "weekly cap (maxWeek:2) respected — overflow stays unplaced");
+
+// daily cap: max 1/day, 2 days → at most 2 placed
+mk({
+  days:["Mon","Tue"], periods:["1","2","3"],
+  teachers:[{id:"t1",name:"Mr A",maxDay:1}],
+  lessons:[{id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:4}],
+  assignments:[]
+});
+for (let i=0;i<4;i++) state.assignments.push(place("l1",null,null));
+generate();
+const perDay = {};
+state.assignments.filter(a=>a.day!=null).forEach(a=>perDay[a.day]=(perDay[a.day]||0)+1);
+ok(Math.max(0,...Object.values(perDay)) <= 1, "daily cap (maxDay:1) respected");
+
+// locked cards are preserved by generate
+mk({
+  days:["Mon","Tue"], periods:["1","2","3"],
+  lessons:[{id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:2}],
+  assignments:[ place("l1",1,2,{locked:true}), place("l1",null,null) ]
+});
+generate();
+const lockedCard = state.assignments.find(a=>a.locked);
+ok(lockedCard.day===1 && lockedCard.period===2, "locked card kept exactly in place");
+
+// generator respects time-off
+mk({
+  days:["Mon","Tue"], periods:["1","2"],
+  classes:[{id:"c1",name:"5A",off:["0|0","0|1"]}],
+  lessons:[{id:"l1",classId:"c1",subjectId:"s1",teacherId:"t1",roomId:null,count:2}],
+  assignments:[]
+});
+for (let i=0;i<2;i++) state.assignments.push(place("l1",null,null));
+generate();
+ok(state.assignments.filter(a=>a.day===0).length === 0, "generator avoids the class's Monday time-off");
+
+// ---------------------------------------------------------------- summary
+const s = document.getElementById("summary");
+s.className = failed ? "bad" : "ok";
+s.textContent = failed ? `${failed} failed, ${passed} passed` : `All ${passed} tests passed`;
+document.title = (failed ? `✗ ${failed} failed` : `✓ ${passed} passed`) + " — TTabler tests";
+</script>
+</body>
+</html>
