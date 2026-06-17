@@ -77,11 +77,24 @@ function migrateOldIfNeeded() {
 }
 
 // ---------- Editor: current-timetable persistence ----------
-// Autosave. No-op until the open timetable has an id (e.g. a shared link
-// that hasn't been saved into the library yet — see app.js saveExplicit).
+// Autosave, debounced. Called after every edit/drag; on a big board writing
+// the whole JSON each time is wasteful, so coalesce rapid changes and flush
+// before the page goes away. No-op until the open timetable has an id (e.g. a
+// shared link not yet saved into the library — see app.js saveExplicit).
+let _saveTimer = null;
 function save() {
   if (!state || !state.id) return;
-  writeTimetable(state);
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => { _saveTimer = null; writeTimetable(state); }, 250);
+}
+function flushSave() {
+  if (!_saveTimer) return;
+  clearTimeout(_saveTimer); _saveTimer = null;
+  if (state && state.id) writeTimetable(state);
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", flushSave);
+  window.addEventListener("pagehide", flushSave);
 }
 
 // Editor entry: load the timetable named by the URL.

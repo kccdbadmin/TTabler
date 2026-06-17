@@ -54,10 +54,19 @@ function classSlotClash(la, lb) {
 }
 
 // Returns a Set of assignment ids that clash (double-booked in same slot).
+// Hot path: runs on every render. lessonInfo()/lessonGroup() do linear scans,
+// so we resolve each placed lesson ONCE into caches and the per-pair loop then
+// only does Map lookups (keeps big boards responsive).
 function computeConflicts() {
   const found = new Set();
   conflictDetails = new Map();
   const nm = (e, fallback) => (e && e.name) ? e.name : fallback;
+  const lessonById = new Map(state.lessons.map(l => [l.id, l]));
+
+  const infoById = new Map(), grpById = new Map();
+  const info  = id => { let v = infoById.get(id); if (v === undefined) infoById.set(id, v = lessonInfo(id)); return v; };
+  const grpOf = l  => { let v = grpById.get(l.id); if (v === undefined) grpById.set(l.id, v = lessonGroup(l)); return v; };
+
   const slots = {}; // key day|period -> list of assignments
   for (const a of state.assignments) {
     if (a.day == null) continue;
@@ -68,14 +77,19 @@ function computeConflicts() {
     const list = slots[k];
     for (let i = 0; i < list.length; i++) {
       for (let j = i+1; j < list.length; j++) {
-        const A = lessonInfo(list[i].lessonId), B = lessonInfo(list[j].lessonId);
+        const A = info(list[i].lessonId), B = info(list[j].lessonId);
         if (!A || !B) continue;
         const ai = list[i].id, aj = list[j].id;
         let clash = false;
-        if (classSlotClash(A.lesson, B.lesson)) {
-          clash = true;
-          const r = `${nm(A.cls,'This class')} double-booked here`;
-          addReason(ai, r); addReason(aj, r);
+        // class clash, unless two disjoint groups of the same division
+        if (A.lesson.classId && A.lesson.classId === B.lesson.classId) {
+          const ga = grpOf(A.lesson), gb = grpOf(B.lesson);
+          const disjoint = ga && gb && ga.divisionKey === gb.divisionKey && ga.groupKey !== gb.groupKey;
+          if (!disjoint) {
+            clash = true;
+            const r = `${nm(A.cls,'This class')} double-booked here`;
+            addReason(ai, r); addReason(aj, r);
+          }
         }
         if (A.lesson.teacherId && A.lesson.teacherId === B.lesson.teacherId) {
           clash = true;
@@ -96,7 +110,7 @@ function computeConflicts() {
   // time-off: a placed card sitting on an unavailable slot is also a violation
   for (const a of state.assignments) {
     if (a.day == null) continue;
-    const l = byId(state.lessons, a.lessonId);
+    const l = lessonById.get(a.lessonId);
     if (l && slotOff(l, a.day, a.period)) { found.add(a.id); addReason(a.id, "Placed on a time-off slot"); }
   }
   return found;
