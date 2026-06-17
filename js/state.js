@@ -119,6 +119,12 @@ function totalSlots() {
   for (let d = 0; d < state.days.length; d++) n += periodsOnDay(d);
   return n;
 }
+// Optional start–end label for a period (e.g. "8:00–8:40"), parallel to
+// state.periods by index. Empty string when not set.
+function periodTime(pi) {
+  const t = state.periodTimes;
+  return (t && t[pi]) ? t[pi] : "";
+}
 
 // ---- Groups / divisions -----------------------------------------------------
 // Groups are first-class, defined per class: class.divisions = [{ id, name,

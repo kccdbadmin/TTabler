@@ -64,7 +64,7 @@ function renderOverview() {
   let html = `<table class="tt overview"><thead><tr><th class="ov-corner" rowspan="2">Class</th>`;
   state.days.forEach((d, di) => html += `<th class="day-h" colspan="${periodsOnDay(di)}">${escapeHtml(d)}</th>`);
   html += `</tr><tr>`;
-  state.days.forEach((d, di) => { for (let p = 0; p < periodsOnDay(di); p++) html += `<th class="per-h">${escapeHtml(state.periods[p])}</th>`; });
+  state.days.forEach((d, di) => { for (let p = 0; p < periodsOnDay(di); p++) html += `<th class="per-h" title="${escapeHtml(periodTime(p))}">${escapeHtml(state.periods[p])}</th>`; });
   html += `</tr></thead><tbody>`;
   state.classes.forEach(c => {
     html += `<tr><th class="cls-h" data-cls="${c.id}" title="Show ${escapeHtml(c.name)}'s timetable">${escapeHtml(c.name)}</th>`;
@@ -117,6 +117,12 @@ function cardHTML(a) {
   </div>`;
 }
 
+// A period header: its label, plus its start–end time below it if set.
+function periodHeadHTML(pi) {
+  const t = periodTime(pi);
+  return escapeHtml(state.periods[pi]) + (t ? `<span class="p-time">${escapeHtml(t)}</span>` : "");
+}
+
 function renderGrid() {
   const wrap = $("#grid-wrap");
   const list = entitiesForMode(state.ui.mode);
@@ -147,7 +153,7 @@ function renderGrid() {
   const transpose = !!(state.ui && state.ui.transpose);
   let html = `<table class="tt"><thead><tr><th></th>`;
   if (transpose) {
-    state.periods.forEach(p => html += `<th>${escapeHtml(p)}</th>`);
+    state.periods.forEach((p, pi) => html += `<th>${periodHeadHTML(pi)}</th>`);
     html += `</tr></thead><tbody>`;
     state.days.forEach((d, di) => {
       html += `<tr><th>${escapeHtml(d)}</th>`;
@@ -158,7 +164,7 @@ function renderGrid() {
     state.days.forEach(d => html += `<th>${escapeHtml(d)}</th>`);
     html += `</tr></thead><tbody>`;
     state.periods.forEach((p, pi) => {
-      html += `<tr><th>${escapeHtml(p)}</th>`;
+      html += `<tr><th>${periodHeadHTML(pi)}</th>`;
       state.days.forEach((d, di) => html += cellHTML(di, pi, d, p));
       html += `</tr>`;
     });

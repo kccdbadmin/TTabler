@@ -48,6 +48,7 @@ One timetable is a plain object (see `blankState()` / `demoState()` in
 ```
 {
   days: ["Mon", …], periods: ["1", …], periodsPerDay: [8,8,8,8,5] | null,
+  periodTimes: ["8:20–9:00", …] | null,   // optional start–end label per period
   subjects:  [{ id, name, color, short? }],
   teachers:  [{ id, name, short?, off?: ["d|p"], maxWeek?, maxDay? }],
   classes:   [{ id, name, short?, off?, maxWeek?, maxDay?,

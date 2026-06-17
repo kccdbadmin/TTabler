@@ -141,6 +141,9 @@ mk({ days:["Mon","Tue","Wed"], periods:["1","2","3","4"], periodsPerDay:[4,4,2] 
 ok(slotExists(0,3), "Mon period 4 exists");
 ok(!slotExists(2,2), "Wed period 3 does not exist (short day)");
 eq(totalSlots(), 10, "totalSlots = 4+4+2");
+mk({ periods:["1","2"], periodTimes:["8:00–8:40",""] });
+eq(periodTime(0), "8:00–8:40", "periodTime returns a set time");
+eq(periodTime(1), "", "periodTime is empty when unset");
 
 // ---------------------------------------------------------------- generator
 describe("generator");

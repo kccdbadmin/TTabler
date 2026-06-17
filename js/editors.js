@@ -342,7 +342,11 @@ function renderTimeTab(el) {
     <div class="ppd-grid" id="t-ppd">
       ${state.days.map((d, i) => `<div class="ppd-cell"><span>${escapeHtml(d)}</span><input type="number" min="0" max="${state.periods.length}" value="${periodsOnDay(i)}" data-day="${i}" /></div>`).join("")}
     </div>
-    <p class="hint" style="margin-top:8px">Editing Days resets per-day counts to full — set Days first, Apply, then adjust per-day counts.</p>
+    <label class="fld">Period times (optional)</label>
+    <div class="ptimes" id="t-ptimes">
+      ${state.periods.map((p, i) => `<div class="ptime-cell"><span>${escapeHtml(p)}</span><input value="${escapeHtml(periodTime(i))}" placeholder="e.g. 8:00–8:40" data-p="${i}" /></div>`).join("")}
+    </div>
+    <p class="hint" style="margin-top:8px">Editing Days/Periods resets the grids above — set them first, Apply, then adjust per-day counts and times.</p>
     <button class="primary" id="t-save" style="width:100%;margin-top:8px">Apply</button>`;
   $("#t-save").onclick = () => {
     const days = $("#t-days").value.split(",").map(s=>s.trim()).filter(Boolean);
@@ -356,15 +360,19 @@ function renderTimeTab(el) {
         const n = parseInt(inp.value); return isNaN(n) ? periods.length : Math.max(0, Math.min(n, periods.length));
       });
     }
+    // period times — align positionally to the (possibly new) period list
+    const times = [...$("#t-ptimes").querySelectorAll("input")].map(inp => inp.value.trim());
+    const periodTimes = periods.map((_, i) => times[i] || "");
     state.days = days; state.periods = periods;
-    state.periodsPerDay = perDay; // null => every day uses all periods
+    state.periodsPerDay = perDay;                               // null => every day uses all periods
+    state.periodTimes = periodTimes.some(Boolean) ? periodTimes : null; // null => no times set
     // clamp existing placements to slots that still exist
     state.assignments.forEach(a => {
       if (a.day != null && (a.day >= days.length || a.period >= periods.length || !slotExists(a.day, a.period))) {
         a.day = null; a.period = null;
       }
     });
-    save(); render(); toast("Time structure updated");
+    save(); render(); renderTabBody(); toast("Time structure updated");
   };
 }
 
