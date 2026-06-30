@@ -76,18 +76,20 @@ function editCaps(key, id) {
   save(); renderTabBody(); render();
 }
 
-// The load badge doubles as a fullness meter: fill = load ÷ (cap or available),
-// red when load exceeds the cap or the slots actually available.
+// The load badge doubles as a fullness meter: fill = load ÷ periods in the
+// week (built from the per-day period counts, so short days count for less).
+// Red when load exceeds the ⚙ cap or the slots actually available (time-off).
 function loadMeterHTML(key, field, item) {
   const load = entityLoad(field, item.id);
-  const avail = entityAvailable(key, item.id);
+  const weekSlots = totalSlots();                 // how many periods there are in the week
+  const avail = entityAvailable(key, item.id);    // minus this entity's own time-off
   const cap = item.maxWeek;
-  const scale = (cap != null ? cap : avail) || 1;
-  const pct = Math.min(100, Math.round(load / scale * 100));
+  const pct = Math.min(100, Math.round(load / (weekSlots || 1) * 100));
   const over = (cap != null && load > cap) || load > avail;
-  const capTxt = cap != null ? ` · cap ${cap}/wk${item.maxDay != null ? `, ${item.maxDay}/day` : ""}` : "";
-  const title = `${load} periods/week · ${avail} slots available${capTxt}`;
-  return `<span class="load-meter${over ? " over" : ""}" style="--fill:${pct}%" title="${escapeHtml(title)}">${load}${cap != null ? "/" + cap : ""}</span>`;
+  const parts = [`${load} of ${weekSlots} periods this week (${pct}% full)`];
+  if (avail < weekSlots) parts.push(`${avail} available after time-off`);
+  if (cap != null) parts.push(`cap ${cap}/wk${item.maxDay != null ? `, ${item.maxDay}/day` : ""}`);
+  return `<span class="load-meter${over ? " over" : ""}" style="--fill:${pct}%" title="${escapeHtml(parts.join(" · "))}">${load}${cap != null ? "/" + cap : ""}</span>`;
 }
 
 // ---- list sorting (Name / Load), shared by the entity tabs ----
