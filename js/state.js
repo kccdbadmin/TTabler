@@ -119,11 +119,43 @@ function totalSlots() {
   for (let d = 0; d < state.days.length; d++) n += periodsOnDay(d);
   return n;
 }
-// Optional start–end label for a period (e.g. "8:00–8:40"), parallel to
-// state.periods by index. Empty string when not set.
+// Period clock times: state.periodTimes[pi] = { start:"HH:MM", end:"HH:MM" },
+// parallel to state.periods. Helpers tolerate missing entries (and legacy
+// free-text strings, which migratePeriodTimes() upgrades on load).
+function timeToMin(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim());
+  return m ? (+m[1]) * 60 + (+m[2]) : null;
+}
+function periodStart(pi) { const e = state.periodTimes && state.periodTimes[pi]; return (e && typeof e === "object" && e.start) || ""; }
+function periodEnd(pi)   { const e = state.periodTimes && state.periodTimes[pi]; return (e && typeof e === "object" && e.end)   || ""; }
+function periodMinutes(pi) {
+  const s = timeToMin(periodStart(pi)), e = timeToMin(periodEnd(pi));
+  return (s != null && e != null && e > s) ? e - s : 0;
+}
+// Display label like "08:20–09:00" (or a legacy string as-is). Empty when unset.
 function periodTime(pi) {
-  const t = state.periodTimes;
-  return (t && t[pi]) ? t[pi] : "";
+  const e = state.periodTimes && state.periodTimes[pi];
+  if (!e) return "";
+  if (typeof e === "string") return e;
+  return (e.start && e.end) ? `${e.start}–${e.end}` : (e.start || e.end || "");
+}
+// 5-minute clock options for the start/end dropdowns, across a school day.
+function timeOptions() {
+  const out = [];
+  for (let m = 6 * 60; m <= 20 * 60; m += 5)
+    out.push(String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"));
+  return out;
+}
+// One-time: upgrade legacy free-text period times ("8:20–9:00") to {start,end}.
+function migratePeriodTimes() {
+  if (!Array.isArray(state.periodTimes)) return false;
+  let changed = false;
+  const norm = t => { const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim()); return m ? String(+m[1]).padStart(2, "0") + ":" + m[2] : ""; };
+  state.periodTimes = state.periodTimes.map(e => {
+    if (typeof e === "string") { changed = true; const p = e.split(/[–-]/); return { start: norm(p[0]), end: norm(p[1]) }; }
+    return e || { start: "", end: "" };
+  });
+  return changed;
 }
 
 // ---- Groups / divisions -----------------------------------------------------

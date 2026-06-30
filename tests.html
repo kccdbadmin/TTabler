@@ -141,9 +141,14 @@ mk({ days:["Mon","Tue","Wed"], periods:["1","2","3","4"], periodsPerDay:[4,4,2] 
 ok(slotExists(0,3), "Mon period 4 exists");
 ok(!slotExists(2,2), "Wed period 3 does not exist (short day)");
 eq(totalSlots(), 10, "totalSlots = 4+4+2");
-mk({ periods:["1","2"], periodTimes:["8:00–8:40",""] });
-eq(periodTime(0), "8:00–8:40", "periodTime returns a set time");
-eq(periodTime(1), "", "periodTime is empty when unset");
+mk({ periods:["1","2"], periodTimes:[{start:"08:00",end:"08:40"},{start:"",end:""}] });
+eq(periodTime(0), "08:00–08:40", "periodTime renders the start–end label");
+eq(periodMinutes(0), 40, "periodMinutes computes end − start");
+eq(periodMinutes(1), 0, "periodMinutes is 0 when unset");
+mk({ periods:["1"], periodTimes:["8:00–8:40"] });
+ok(migratePeriodTimes(), "migratePeriodTimes upgrades a legacy string");
+eq(periodStart(0), "08:00", "legacy time parsed to a padded start");
+eq(periodMinutes(0), 40, "legacy time yields correct minutes");
 
 // ---------------------------------------------------------------- generator
 describe("generator");

@@ -56,7 +56,9 @@ $("#sel-axis").onchange = e => { state.ui.transpose = e.target.value === "day"; 
 load();
 if (state) { // load() redirects to the library when there's nothing to open
   if (!state.ui) state.ui = { mode:"class", entity: state.classes[0]?.id || null };
-  if (migrateGroups()) save(); // fold legacy free-text groups into structured ones
+  let migrated = migrateGroups();             // fold legacy free-text groups into structured ones
+  migrated = migratePeriodTimes() || migrated; // upgrade legacy period times to {start,end}
+  if (migrated) save();
   // expose a few handles for debugging in the browser console
   Object.assign(TT, { get state(){ return state; }, generate, render, save, load });
   boot();
