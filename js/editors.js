@@ -92,6 +92,32 @@ function loadMeterHTML(key, field, item) {
   return `<span class="load-meter${over ? " over" : ""}" style="--fill:${pct}%" title="${escapeHtml(parts.join(" · "))}">${load}${cap != null ? "/" + cap : ""}</span>`;
 }
 
+// Per-subject rollup: required vs placed periods, minutes allotted (summed from
+// each placed period's duration), and a breakdown by grade (class name when a
+// class has no grade) — powers the Subjects dashboard.
+function subjectStats(subjId) {
+  const lessons = state.lessons.filter(l => l.subjectId === subjId);
+  const lessonIds = new Set(lessons.map(l => l.id));
+  const gradeOf = classId => { const c = byId(state.classes, classId); return c ? (c.grade ? "Grade " + c.grade : c.name) : "—"; };
+  const groups = {}; // label -> { label, required, placed, lessons }
+  let required = 0;
+  lessons.forEach(l => {
+    required += (l.count || 0);
+    const k = gradeOf(l.classId);
+    const g = groups[k] = groups[k] || { label: k, required: 0, placed: 0, lessons: 0 };
+    g.required += (l.count || 0); g.lessons++;
+  });
+  let placed = 0, minutes = 0;
+  state.assignments.forEach(a => {
+    if (a.day == null || !lessonIds.has(a.lessonId)) return;
+    placed++; minutes += periodMinutes(a.period);
+    const l = byId(state.lessons, a.lessonId);
+    const g = l && groups[gradeOf(l.classId)];
+    if (g) g.placed++;
+  });
+  return { required, placed, minutes, unplaced: Math.max(0, required - placed), byGroup: Object.values(groups) };
+}
+
 // ---- list sorting (Name / Load), shared by the entity tabs ----
 // "manual" keeps the stored order until the user clicks a sort header.
 let entitySort = { key: "manual", dir: 1 };
@@ -189,23 +215,32 @@ function renderSimpleTab(el, key, title, placeholder) {
 }
 
 function renderSubjectsTab(el) {
-  el.innerHTML = `<h3>Subjects</h3><p class="hint">Small box = abbreviation · badge = periods/week (load). Colours show on the cards. Click 👁 to see every lesson.</p>` + sortBarHTML();
+  el.innerHTML = `<h3>Subjects</h3><p class="hint">Each card shows what's placed (periods + minutes) and where it sits, by grade. Click 👁 to see every lesson.</p>` + sortBarHTML();
   sortedEntities(state.subjects, "subjectId").forEach(item => {
-    const load = entityLoad("subjectId", item.id);
-    const row = document.createElement("div"); row.className = "row-item";
-    row.innerHTML = `<span class="swatch" style="background:${safeColor(item.color)}"></span>
-      <input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
-      <input class="abbr" value="${escapeHtml(item.short || '')}" placeholder="abbr" title="Abbreviation" />
-      <input type="color" value="${safeColor(item.color)}" style="width:28px;height:24px;padding:1px" />
-      <span class="load" title="${load} periods/week">${load}</span>
-      <span class="view-ent" title="Show this subject's lessons">👁</span>
-      <span class="x">×</span>`;
-    row.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
-    row.querySelector(".abbr").onchange = e => { item.short = e.target.value.trim(); save(); refreshViews(); };
-    row.querySelector('input[type=color]').oninput = e => { item.color = e.target.value; row.querySelector(".swatch").style.background = e.target.value; save(); render(); };
-    row.querySelector(".view-ent").onclick = () => viewEntity("subject", item.id);
-    row.querySelector(".x").onclick = () => removeEntity("subjects", item.id);
-    el.appendChild(row);
+    const st = subjectStats(item.id);
+    const minTxt = st.minutes ? ` · <b>${st.minutes}</b> min` : "";
+    const unTxt = st.unplaced ? ` · <span class="warn">${st.unplaced} unplaced</span>` : "";
+    const breakdown = st.byGroup.length
+      ? st.byGroup.map(g => `<div class="bk"><span class="bk-l">${escapeHtml(g.label)}</span><span class="bk-v">${g.placed}/${g.required} periods · ${g.lessons} lesson${g.lessons===1?"":"s"}</span></div>`).join("")
+      : `<div class="bk-empty">No lessons yet</div>`;
+    const card = document.createElement("div"); card.className = "subj-card";
+    card.innerHTML = `
+      <div class="subj-head">
+        <span class="swatch" style="background:${safeColor(item.color)}"></span>
+        <input class="label" value="${escapeHtml(item.name)}" style="background:transparent;border:none;padding:2px 0" />
+        <input class="abbr" value="${escapeHtml(item.short || '')}" placeholder="abbr" title="Abbreviation" />
+        <input type="color" value="${safeColor(item.color)}" style="width:28px;height:24px;padding:1px" />
+        <span class="view-ent" title="Show this subject's lessons">👁</span>
+        <span class="x">×</span>
+      </div>
+      <div class="subj-stats"><b>${st.required}</b>/wk · <b>${st.placed}</b> placed${minTxt}${unTxt}</div>
+      <div class="subj-break">${breakdown}</div>`;
+    card.querySelector(".label").onchange = e => { item.name = e.target.value; save(); refreshViews(); };
+    card.querySelector(".abbr").onchange = e => { item.short = e.target.value.trim(); save(); refreshViews(); };
+    card.querySelector('input[type=color]').oninput = e => { item.color = e.target.value; card.querySelector(".swatch").style.background = e.target.value; save(); render(); };
+    card.querySelector(".view-ent").onclick = () => viewEntity("subject", item.id);
+    card.querySelector(".x").onclick = () => removeEntity("subjects", item.id);
+    el.appendChild(card);
   });
   bindSortBar(el);
   const add = document.createElement("div"); add.className = "add-card";
